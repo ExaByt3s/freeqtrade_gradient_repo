@@ -1,2 +1,3 @@
 apt update
-apt install yash micro
+apt install yash micro neovim ranger
+
