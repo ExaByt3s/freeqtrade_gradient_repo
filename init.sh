@@ -5,3 +5,4 @@ export EDITOR='micro'
 alias e='${EDITOR}'
 alias edit='${EDITOR}'
 . /opt/poplar/enable.sh
+/root/.gitconfig

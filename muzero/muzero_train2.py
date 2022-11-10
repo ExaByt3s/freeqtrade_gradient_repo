@@ -23,18 +23,12 @@ import collections
 import typing
 from typing import Dict, List, Optional
 
-from tensorflow.keras.models import Sequential, clone_model, Model
-from tensorflow.keras.layers import (Dense, ReLU, Input, Lambda, LSTM, Activation,
-                                     GlobalAveragePooling1D, Flatten,
-                                     MaxPool1D, Conv1D, Add, BatchNormalization, AveragePooling1D)
-from tensorflow.keras.optimizers import Adam, SGD
-# from tensorflow.keras.losses import Huber
-# from tensorflow.keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import (Dense, Input, Activation, Flatten, Conv1D, Add, BatchNormalization, AveragePooling1D)
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
-# from tensorflow.keras.callbacks import EarlyStopping
-# from tensorflow.keras.metrics import categorical_crossentropy, mean_squared_error
+from tensorflow.keras.metrics import categorical_crossentropy
 from tensorflow.keras.utils import Progbar
-# import tensorflow.keras as keras
 import tensorflow as tf
 
 from multiprocessing import Process
