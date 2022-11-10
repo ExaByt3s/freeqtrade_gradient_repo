@@ -1,0 +1,12 @@
+tensorflow
+# tensorflow-addons
+tensorflow_probability
+matplotlib
+pillow
+pandas
+opencv-python
+gym
+pygame
+kaggle_environments
+psutil
+pynvml
