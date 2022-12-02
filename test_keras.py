@@ -1,3 +1,4 @@
+import os
 import sys
 import numpy as np
 import tensorflow as tf
@@ -338,32 +339,50 @@ def define_model():
 
     return model
 
-try:
-    model = tf.keras.models.load_model('./model')
-except OSError as error:
-    print(f'Model has not found: {error}')
+#try:
+#    model = tf.keras.models.load_model('./model')
+#except OSError as error:
+#    print(f'Model has not found: {error}')
 
-    model = define_model()
+#    model = define_model()
 
 # sys.exit()
-from tensorflow.keras.optimizers import Adam
-early_stopping = EarlyStopping(monitor='loss', patience=100)
-model.compile(optimizer=Adam(learning_rate=1e-4), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
-model.summary()
+if 'POPLAR_SDK_ENABLED' in os.environ:
+    from tensorflow.python import ipu
+    ipu_config = ipu.config.IPUConfig()
+    ipu_config.auto_select_ipus = 16
+    ipu_config.configure_ipu_system()
+    strategy = ipu.ipu_strategy.IPUStrategy()
+else:
+    gpu = tf.config.list_logical_devices('GPU')
+    strategy = tf.distribute.MirroredStrategy(gpu)
 
-while True:
-    try:
-        history = model.fit(x_train, y_train, batch_size=256, epochs=1, validation_data=(x_test, y_test),
-                            callbacks=[early_stopping])
+print(f'device: {tf.config.list_logical_devices()}')
 
-        # y_predict_probability = model.predict(x_test)
-        # y_predict = np.argmax(y_predict_probability, axis=1)
-        # # print(len(y_test), len(y_predict))
-        # print(f'accuracy: {(np.count_nonzero(y_test == y_predict)) / len(y_predict) * 100:0.4f}(%)')
-        # for i in [0, 1, 2]:
-            # print(f'accuracy: {i}: {np.count_nonzero((y_test == y_predict) & (y_predict == i)) / len(y_predict) * 100:0.4f}(%)')
+if False:
+    tf.debugging.set_log_device_placement(True)
 
-    except KeyboardInterrupt:
-        print(f'\nPaused: KeyboardInterrupt')
-        model.save('./model')
-        break
+with strategy.scope():
+    model = define_model()
+    from tensorflow.keras.optimizers import Adam
+    early_stopping = EarlyStopping(monitor='loss', patience=100)
+    model.compile(optimizer=Adam(learning_rate=1e-4), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
+    model.summary()
+
+    while True:
+        try:
+            #history = model.fit(x_train, y_train, batch_size=256, epochs=1, validation_data=(x_test, y_test),
+            history = model.fit(x_train, y_train, batch_size=200, epochs=1,
+                                callbacks=[early_stopping])
+
+            # y_predict_probability = model.predict(x_test)
+            # y_predict = np.argmax(y_predict_probability, axis=1)
+            # # print(len(y_test), len(y_predict))
+            # print(f'accuracy: {(np.count_nonzero(y_test == y_predict)) / len(y_predict) * 100:0.4f}(%)')
+            # for i in [0, 1, 2]:
+                # print(f'accuracy: {i}: {np.count_nonzero((y_test == y_predict) & (y_predict == i)) / len(y_predict) * 100:0.4f}(%)')
+
+        except KeyboardInterrupt:
+            print(f'\nPaused: KeyboardInterrupt')
+            model.save('./model')
+            break

@@ -13,7 +13,7 @@ class RelativePosition(tf.keras.layers.Layer):
         x, y = tf.meshgrid(tf.range(n), tf.range(n))
         self.mask = tf.Variable(initial_value=tf.math.greater(x, y), trainable=False)
 
-    @jit
+    # @jit
     def _f(self, a):
         # https://www.tensorflow.org/api_docs/python/tf/meshgrid
         # https://www.tensorflow.org/api_docs/python/tf/math/subtract
@@ -85,7 +85,7 @@ from tensorflow.python.ops import variable_scope
 from tensorflow.python.ops.ragged import ragged_getitem
 from tensorflow.python.ops.ragged import ragged_tensor
 from tensorflow.python.platform import tf_logging
-from tensorflow.python.trackable import base as trackable
+# from tensorflow.python.trackable import base as trackable
 from tensorflow.python.util import dispatch
 from tensorflow.python.util import nest
 from tensorflow.python.util import tf_decorator

@@ -50,7 +50,7 @@ x_test, y_test = x_test[:test_data_len], y_test[:test_data_len]
 if 'POPLAR_SDK_ENABLED' in os.environ:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
-    ipu_config.auto_select_ipus = 30
+    ipu_config.auto_select_ipus = 16
     ipu_config.configure_ipu_system()
     strategy = ipu.ipu_strategy.IPUStrategy()
 else:
@@ -59,7 +59,7 @@ else:
 
 print(f'device: {tf.config.list_logical_devices()}')
 
-if False:
+if True:
     tf.debugging.set_log_device_placement(True)
 
 with strategy.scope():
