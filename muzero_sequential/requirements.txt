@@ -1,6 +1,3 @@
-# tensorflow
-# tensorflow-addons
-# tensorflow_probability
 matplotlib
 pillow
 pandas
