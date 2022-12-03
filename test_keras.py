@@ -26,21 +26,22 @@ from freqtrade.enums import CandleType
 from pathlib import Path
 
 pair_list = [
-    'BTC/USDT',
+    # 'BTC/USDT',
+    'ETH/USDT',
 ]  # XRP/USDT ETH/USDT TRX/USDT
 
 data = load_data(
     datadir=Path('./freqtrade/user_data/data/binance'),
     pairs=pair_list,
     timeframe='5m',
-    timerange=TimeRange.parse_timerange('20210801-20220101'),
+    timerange=TimeRange.parse_timerange('20210101-20220101'),
     startup_candles=0,
     data_format='jsongz',
     candle_type=CandleType.FUTURES,
 )
 
 
-dataframe = data['BTC/USDT']
+dataframe = data['ETH/USDT']
 dataframe = dataframe.drop(['date'], axis=1)
 mask_volume = (dataframe['volume'] > 0)
 
@@ -110,8 +111,8 @@ if len(target) != len(answer):
 # ratio = 0.7
 # border = int(len(target) * ratio)
 length_margin = 1600
-length_test = 400
-length_train = 10000
+length_test = 3200
+length_train = 32000
 start_train = len(target) - (length_test + length_train) - length_margin
 print(f'ratio: {length_train / length_test:0.4f}')
 
@@ -138,17 +139,34 @@ x_test  = target_test
 y_train = answer_train
 y_test  = answer_test
 
-data_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-data_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+# data_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+# data_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
 
 batch_size = 200
-data_train = data_train.batch(batch_size)
-data_test = data_test.batch(batch_size)
+# data_train = data_train.batch(batch_size, drop_remainder=True)
+# data_test = data_test.batch(batch_size, drop_remainder=True)
 
-option = tf.data.Options()
-option.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
-data_train = data_train.with_options(option)
-data_test = data_test.with_options(option)
+# option = tf.data.Options()
+# option.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+# data_train = data_train.with_options(option)
+# data_test = data_test.with_options(option)
+
+def make_divisible(number, divisor):
+    return number - number % divisor
+
+train_data_len = x_train.shape[0]
+train_data_len = make_divisible(train_data_len, batch_size)
+x_train, y_train = x_train[:train_data_len], y_train[:train_data_len]
+
+test_data_len = x_test.shape[0]
+test_data_len = make_divisible(test_data_len, batch_size)
+x_test, y_test = x_test[:test_data_len], y_test[:test_data_len]
+
+print(x_test.shape)
+print(x_train.shape)
+print(y_test.shape)
+print(y_train.shape)
+
 
 def print_summary_y(name: str, a: ndarray):
     for i in [0, 1, 2]:
@@ -221,6 +239,7 @@ def define_model():
     # https://www.tensorflow.org/api_docs/python/tf/keras/Model
     inputs = Input(shape=(200, 10,))
 
+    '''
     b1 = DenseBlock()(inputs)
     b2 = DenseBlock()(inputs)
     b3 = DenseBlock()(inputs)
@@ -244,19 +263,18 @@ def define_model():
     x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
-
     '''
+
     x = Flatten()(inputs)
-    x = Dense(5000)(x)
+    x = Dense(10000)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(5000)(x)
+    x = Dense(10000)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
-    '''
 
     '''
     model = tf.keras.models.Sequential([
@@ -275,14 +293,16 @@ def define_model():
     return model
 
 if 'POPLAR_SDK_ENABLED' in os.environ:
+# if False:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
     ipu_config.auto_select_ipus = 16
     ipu_config.configure_ipu_system()
     strategy = ipu.ipu_strategy.IPUStrategy()
 else:
-    gpu = tf.config.list_logical_devices('GPU')
-    strategy = tf.distribute.MirroredStrategy(gpu)
+    # gpu = tf.config.list_logical_devices('GPU')
+    # strategy = tf.distribute.MirroredStrategy(gpu)
+    strategy = None
 
 print(f'device: {tf.config.list_logical_devices()}')
 
@@ -291,9 +311,13 @@ if False:
 
 from tensorflow.keras.optimizers import Adam
 
+from contextlib import nullcontext
+
+# with get_stuff() if needs_with() else nullcontext() as gs:
 with strategy.scope():
-    data_train = strategy.experimental_distribute_dataset(data_train)
-    data_test = strategy.experimental_distribute_dataset(data_test)
+# with nullcontext():
+    # data_train = strategy.experimental_distribute_dataset(data_train)
+    # data_test = strategy.experimental_distribute_dataset(data_test)
 
     try:
         model = tf.keras.models.load_model('./model')
@@ -307,9 +331,10 @@ with strategy.scope():
 
     while True:
         try:
-            # history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
-            history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
+            history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
+            # history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
+                                # callbacks=[early_stopping], steps_per_epoch=x_train.shape[0] // batch_size, validation_steps=x_test.shape[0] // batch_size)
 
             # y_predict_probability = model.predict(x_test)
             # y_predict = np.argmax(y_predict_probability, axis=1)
