@@ -3,4 +3,4 @@
 sh init_apt.sh
 sh init_micro.sh
 sh init_pip.sh
-sh init_yash.sh
+yash --profile init_yash.sh
