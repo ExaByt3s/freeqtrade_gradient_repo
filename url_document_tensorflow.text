@@ -4,5 +4,6 @@ https://www.tensorflow.org/api_docs/python/tf/debugging/set_log_device_placement
 https://www.tensorflow.org/api_docs/python/tf/distribute
 https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy
 https://www.tensorflow.org/api_docs/python/tf/distribute/TPUStrategy
+https://www.tensorflow.org/api_docs/python/tf/keras/Model
 https://www.tensorflow.org/guide/gpu
 https://www.tensorflow.org/guide/tpu

@@ -183,15 +183,13 @@ from keras_layer import RelativePosition, relative_position, DenseInputBias
 class DenseBlock(tf.keras.layers.Layer):
     def __init__(self):
         super(DenseBlock, self).__init__()
-        self.layer_1 = Flatten()
-        self.layer_2 = Dense(64)
-        self.layer_3 = BatchNormalization()
-        self.layer_4 = Activation('relu')
-        self.layer_5 = Dense(64)
+        self.layer_1 = Dense(64)
+        self.layer_2 = BatchNormalization()
+        self.layer_3 = Activation('relu')
+        self.layer_4 = Dense(64)
+        self.layer_5 = BatchNormalization()
         self.layer_6 = Activation('relu')
-        self.layer_7 = BatchNormalization()
-        self.layer_8 = Activation('relu')
-        self.layer_9 = Dense(4)
+        self.layer_7 = Dense(4)
 
     def call(self, inputs):
         x = self.layer_1(inputs)
@@ -201,8 +199,26 @@ class DenseBlock(tf.keras.layers.Layer):
         x = self.layer_5(x)
         x = self.layer_6(x)
         x = self.layer_7(x)
-        x = self.layer_8(x)
-        x = self.layer_9(x)
+        return x
+
+class DenseBlockSkip(tf.keras.layers.Layer):
+    def __init__(self, n):
+        super(DenseBlockSkip, self).__init__()
+        self.layer_1 = BatchNormalization()
+        self.layer_2 = Activation('relu')
+        self.layer_3 = Dense(64)
+        self.layer_4 = BatchNormalization()
+        self.layer_5 = Activation('relu')
+        self.layer_6 = Dense(n)
+
+    def call(self, inputs):
+        x = self.layer_1(inputs)
+        x = self.layer_2(x)
+        x = self.layer_3(x)
+        x = self.layer_4(x)
+        x = self.layer_5(x)
+        x = self.layer_6(x)
+        x += inputs
         return x
 
 def define_model():
@@ -236,21 +252,21 @@ def define_model():
     model = CustomModel()  # inputs=inputs, outputs=x
     '''
 
-    # https://www.tensorflow.org/api_docs/python/tf/keras/Model
-    inputs = Input(shape=(200, 10,))
+    inputs = Input(shape=(200, 10))
 
     '''
-    b1 = DenseBlock()(inputs)
-    b2 = DenseBlock()(inputs)
-    b3 = DenseBlock()(inputs)
-    b4 = DenseBlock()(inputs)
-    b5 = DenseBlock()(inputs)
-    b6 = DenseBlock()(inputs)
-    b7 = DenseBlock()(inputs)
-    b8 = DenseBlock()(inputs)
-    b9 = DenseBlock()(inputs)
-    b10 = DenseBlock()(inputs)
-    b11 = DenseBlock()(inputs)
+    x = Flatten()(inputs)
+    b1 = DenseBlock()(x)
+    b2 = DenseBlock()(x)
+    b3 = DenseBlock()(x)
+    b4 = DenseBlock()(x)
+    b5 = DenseBlock()(x)
+    b6 = DenseBlock()(x)
+    b7 = DenseBlock()(x)
+    b8 = DenseBlock()(x)
+    b9 = DenseBlock()(x)
+    b10 = DenseBlock()(x)
+    b11 = DenseBlock()(x)
     x = Concatenate()([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11])
     # x = RelativePosition()(x)
     x = BatchNormalization()(x)
@@ -266,15 +282,34 @@ def define_model():
     '''
 
     x = Flatten()(inputs)
-    x = Dense(10000)(x)
+    x = Dense(1000)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(10000)(x)
+    x = Dense(1000)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
+
+    '''
+    x = Flatten()(inputs)
+    x = Dense(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = DenseBlockSkip(200)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(2)(x)
+    x = Activation('softmax')(x)
+    model = Model(inputs=inputs, outputs=x)
+    '''
 
     '''
     model = tf.keras.models.Sequential([
@@ -293,16 +328,17 @@ def define_model():
     return model
 
 if 'POPLAR_SDK_ENABLED' in os.environ:
-# if False:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
     ipu_config.auto_select_ipus = 16
     ipu_config.configure_ipu_system()
     strategy = ipu.ipu_strategy.IPUStrategy()
+    strategy_scope = strategy.scope()
 else:
     # gpu = tf.config.list_logical_devices('GPU')
     # strategy = tf.distribute.MirroredStrategy(gpu)
-    strategy = None
+    from contextlib import nullcontext
+    strategy_scope = nullcontext()
 
 print(f'device: {tf.config.list_logical_devices()}')
 
@@ -311,11 +347,8 @@ if False:
 
 from tensorflow.keras.optimizers import Adam
 
-from contextlib import nullcontext
 
-# with get_stuff() if needs_with() else nullcontext() as gs:
-with strategy.scope():
-# with nullcontext():
+with strategy_scope:
     # data_train = strategy.experimental_distribute_dataset(data_train)
     # data_test = strategy.experimental_distribute_dataset(data_test)
 
