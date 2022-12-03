@@ -1,2 +1,2 @@
 apt update
-apt install yash micro neovim ranger htop tmux time
+apt install yash neovim ranger htop tmux time
