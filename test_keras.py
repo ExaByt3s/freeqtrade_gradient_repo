@@ -112,7 +112,7 @@ if len(target) != len(answer):
 # border = int(len(target) * ratio)
 length_margin = 1600
 length_test = 3200
-length_train = 32000
+length_train = 100000
 start_train = len(target) - (length_test + length_train) - length_margin
 print(f'ratio: {length_train / length_test:0.4f}')
 
@@ -281,35 +281,35 @@ def define_model():
     model = Model(inputs=inputs, outputs=x)
     '''
 
+    '''
     x = Flatten()(inputs)
-    x = Dense(1000)(x)
+    x = Dense(1500)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(1000)(x)
+    x = Dense(1500)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
+    '''
 
-    '''
     x = Flatten()(inputs)
-    x = Dense(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
-    x = DenseBlockSkip(200)(x)
+    x = Dense(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
+    x = DenseBlockSkip(1000)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
-    '''
 
     '''
     model = tf.keras.models.Sequential([
@@ -330,7 +330,7 @@ def define_model():
 if 'POPLAR_SDK_ENABLED' in os.environ:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
-    ipu_config.auto_select_ipus = 16
+    ipu_config.auto_select_ipus = 1
     ipu_config.configure_ipu_system()
     strategy = ipu.ipu_strategy.IPUStrategy()
     strategy_scope = strategy.scope()
@@ -358,13 +358,13 @@ with strategy_scope:
         print(f'Model has not found: {error}')
         model = define_model()
 
-    early_stopping = EarlyStopping(monitor='loss', patience=100)
+    early_stopping = EarlyStopping(monitor='loss', patience=10)
     model.compile(optimizer=Adam(learning_rate=1e-6), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
     model.summary()
 
     while True:
         try:
-            history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
+            history = model.fit(x_train, y_train, batch_size=200, epochs=300, validation_data=(x_test, y_test),
             # history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
                                 # callbacks=[early_stopping], steps_per_epoch=x_train.shape[0] // batch_size, validation_steps=x_test.shape[0] // batch_size)
