@@ -33,7 +33,7 @@ data = load_data(
     datadir=Path('./freqtrade/user_data/data/binance'),
     pairs=pair_list,
     timeframe='5m',
-    timerange=TimeRange.parse_timerange('20210101-20220101'),
+    timerange=TimeRange.parse_timerange('20210801-20220101'),
     startup_candles=0,
     data_format='jsongz',
     candle_type=CandleType.FUTURES,
@@ -111,7 +111,7 @@ if len(target) != len(answer):
 # border = int(len(target) * ratio)
 length_margin = 1600
 length_test = 400
-length_train = 80000
+length_train = 10000
 start_train = len(target) - (length_test + length_train) - length_margin
 print(f'ratio: {length_train / length_test:0.4f}')
 
@@ -141,16 +141,14 @@ y_test  = answer_test
 data_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
 data_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
 
-# The batch size must now be set on the Dataset objects.
 batch_size = 200
 data_train = data_train.batch(batch_size)
 data_test = data_test.batch(batch_size)
 
-# Disable AutoShard.
-options = tf.data.Options()
-options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
-data_train = data_train.with_options(options)
-data_test = data_test.with_options(options)
+option = tf.data.Options()
+option.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+data_train = data_train.with_options(option)
+data_test = data_test.with_options(option)
 
 def print_summary_y(name: str, a: ndarray):
     for i in [0, 1, 2]:
@@ -294,6 +292,9 @@ if False:
 from tensorflow.keras.optimizers import Adam
 
 with strategy.scope():
+    data_train = strategy.experimental_distribute_dataset(data_train)
+    data_test = strategy.experimental_distribute_dataset(data_test)
+
     try:
         model = tf.keras.models.load_model('./model')
     except OSError as error:
@@ -307,7 +308,7 @@ with strategy.scope():
     while True:
         try:
             # history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
-            history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=data_test,
+            history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
 
             # y_predict_probability = model.predict(x_test)
