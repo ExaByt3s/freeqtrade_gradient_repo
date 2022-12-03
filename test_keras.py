@@ -54,19 +54,19 @@ mask_answer = (answer != -1)
 
 import indicator
 dataframe['heikin-ashi_close'] = (dataframe['open'] + dataframe['high'] + dataframe['low'] + dataframe['close']) / 4
-# dataframe['moving_average_simple_200'] = indicator.moving_average_simple(dataframe['heikin-ashi_close'].to_numpy(), window=200)
-# dataframe['regression_1_200'] = indicator.regression_1(dataframe['heikin-ashi_close'].to_numpy(), window=200)
+dataframe['moving_average_simple_200'] = indicator.moving_average_simple(dataframe['heikin-ashi_close'].to_numpy(), window=200)
+dataframe['regression_1_200'] = indicator.regression_1(dataframe['heikin-ashi_close'].to_numpy(), window=200)
 
 import talib.abstract as ta
-# dataframe['EMA200'] = ta.EMA(dataframe['heikin-ashi_close'], timeperiod=200)
-# dataframe['WMA200'] = ta.WMA(dataframe['heikin-ashi_close'], timeperiod=200)
+dataframe['EMA200'] = ta.EMA(dataframe['heikin-ashi_close'], timeperiod=200)
+dataframe['WMA200'] = ta.WMA(dataframe['heikin-ashi_close'], timeperiod=200)
 # dataframe'RSI9'] = ta.RSI(dataframe['heikin-ashi_close'], timeperiod=9)
 
 import freqtrade.vendor.qtpylib.indicators as qtpylib
-# dataframe['HMA200'] = qtpylib.hma(dataframe['heikin-ashi_close'], window=200)
+dataframe['HMA200'] = qtpylib.hma(dataframe['heikin-ashi_close'], window=200)
 
 column_drop = ['open', 'high', 'low', 'close', 'volume']
-# column_drop.append('heikin-ashi_close')
+column_drop.append('heikin-ashi_close')
 dataframe = dataframe.drop(column_drop, axis=1)
 
 # column_drop = ['volume']
@@ -80,13 +80,13 @@ print(column)
 # # for i in ['open', 'high', 'low', 'close', 'volume']:
 # for i in column:
     # dataframe[i] = preprocessing.scale(dataframe[i] - dataframe[i].shift(1))
-'''
+
 for i in range(len(column)):
     for j in range(i + 1, len(column)):
         dataframe[f'{column[i]} - {column[j]}'] = dataframe[column[i]] - dataframe[column[j]]
 dataframe = dataframe.drop(column, axis=1)
 print(f'column: {dataframe.columns.tolist()}')
-'''
+
 
 # print(dataframe)
 # sys.exit()
@@ -138,6 +138,20 @@ x_test  = target_test
 y_train = answer_train
 y_test  = answer_test
 
+data_train = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+data_test = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+
+# The batch size must now be set on the Dataset objects.
+batch_size = 200
+data_train = data_train.batch(batch_size)
+data_test = data_test.batch(batch_size)
+
+# Disable AutoShard.
+options = tf.data.Options()
+options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+data_train = data_train.with_options(options)
+data_test = data_test.with_options(options)
+
 def print_summary_y(name: str, a: ndarray):
     for i in [0, 1, 2]:
         print(f'{name}: {i}: {np.count_nonzero(a == i) / len(a) * 100:0.4f}(%)')
@@ -154,14 +168,14 @@ class DenseBlock(tf.keras.layers.Layer):
     def __init__(self):
         super(DenseBlock, self).__init__()
         self.layer_1 = Flatten()
-        self.layer_2 = Dense(32)
+        self.layer_2 = Dense(64)
         self.layer_3 = BatchNormalization()
         self.layer_4 = Activation('relu')
-        self.layer_5 = Dense(32)
+        self.layer_5 = Dense(64)
         self.layer_6 = Activation('relu')
         self.layer_7 = BatchNormalization()
         self.layer_8 = Activation('relu')
-        self.layer_9 = Dense(1)
+        self.layer_9 = Dense(4)
 
     def call(self, inputs):
         x = self.layer_1(inputs)
@@ -207,52 +221,7 @@ def define_model():
     '''
 
     # https://www.tensorflow.org/api_docs/python/tf/keras/Model
-    inputs = Input(shape=(200, 1,))
-
-    # b1 = Flatten()(inputs)
-    # b1 = Dense(32)(b1)
-    # b1 = BatchNormalization()(b1)
-    # b1 = Activation('relu')(b1)
-    # b1 = Dense(32)(b1)
-    # b1 = BatchNormalization()(b1)
-    # b1 = Activation('relu')(b1)
-    # b1 = Dense(1)(b1)
-#
-    # b2 = Flatten()(inputs)
-    # b2 = Dense(32)(b2)
-    # b2 = BatchNormalization()(b2)
-    # b2 = Activation('relu')(b2)
-    # b2 = Dense(32)(b2)
-    # b2 = BatchNormalization()(b2)
-    # b2 = Activation('relu')(b2)
-    # b2 = Dense(1)(b2)
-#
-    # b3 = Flatten()(inputs)
-    # b3 = Dense(32)(b3)
-    # b3 = BatchNormalization()(b3)
-    # b3 = Activation('relu')(b3)
-    # b3 = Dense(32)(b3)
-    # b3 = BatchNormalization()(b3)
-    # b3 = Activation('relu')(b3)
-    # b3 = Dense(1)(b3)
-#
-    # b4 = Flatten()(inputs)
-    # b4 = Dense(32)(b4)
-    # b4 = BatchNormalization()(b4)
-    # b4 = Activation('relu')(b4)
-    # b4 = Dense(32)(b4)
-    # b4 = BatchNormalization()(b4)
-    # b4 = Activation('relu')(b4)
-    # b4 = Dense(1)(b4)
-#
-    # b5 = Flatten()(inputs)
-    # b5 = Dense(32)(b5)
-    # b5 = BatchNormalization()(b5)
-    # b5 = Activation('relu')(b5)
-    # b5 = Dense(32)(b5)
-    # b5 = BatchNormalization()(b5)
-    # b5 = Activation('relu')(b5)
-    # b5 = Dense(1)(b5)
+    inputs = Input(shape=(200, 10,))
 
     b1 = DenseBlock()(inputs)
     b2 = DenseBlock()(inputs)
@@ -268,10 +237,10 @@ def define_model():
     x = Concatenate()([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11])
     # x = RelativePosition()(x)
     x = BatchNormalization()(x)
-    x = Dense(32)(x)
+    x = Dense(64)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(32)(x)
+    x = Dense(64)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
@@ -279,48 +248,16 @@ def define_model():
     model = Model(inputs=inputs, outputs=x)
 
     '''
-    model = tf.keras.models.Sequential([
-        Flatten(),
-        Dense(16),
-        BatchNormalization(),
-        Activation('relu'),
-        Dense(2),
-        Activation('softmax'),
-    ])
-    '''
-
-    '''
-    model = tf.keras.models.Sequential([
-        Flatten(),
-        # Dense(512),
-        Dense(16),
-        BatchNormalization(),
-        Activation('relu'),
-        # Dropout(0.1),
-        # Dense(256),
-        # Dense(16),
-        # BatchNormalization(),
-        # Activation('relu'),
-        # Dropout(0.1),
-        Dense(2),
-        Activation('softmax'),
-    ])
-    '''
-
-    '''
-    model = tf.keras.models.Sequential([
-        Flatten(),
-        Dense(128),
-        BatchNormalization(),
-        Activation('relu'),
-        # Dropout(0.1),
-        Dense(64),
-        BatchNormalization(),
-        Activation('relu'),
-        # Dropout(0.1),
-        Dense(2),
-        Activation('softmax'),
-    ])
+    x = Flatten()(inputs)
+    x = Dense(5000)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(5000)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(2)(x)
+    x = Activation('softmax')(x)
+    model = Model(inputs=inputs, outputs=x)
     '''
 
     '''
@@ -339,7 +276,6 @@ def define_model():
 
     return model
 
-# sys.exit()
 if 'POPLAR_SDK_ENABLED' in os.environ:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
@@ -362,16 +298,16 @@ with strategy.scope():
         model = tf.keras.models.load_model('./model')
     except OSError as error:
         print(f'Model has not found: {error}')
-
         model = define_model()
-    # model = define_model()
+
     early_stopping = EarlyStopping(monitor='loss', patience=100)
-    model.compile(optimizer=Adam(learning_rate=1e-4), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
+    model.compile(optimizer=Adam(learning_rate=1e-6), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
     model.summary()
 
     while True:
         try:
-            history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
+            # history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=(x_test, y_test),
+            history = model.fit(x_train, y_train, batch_size=200, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
 
             # y_predict_probability = model.predict(x_test)

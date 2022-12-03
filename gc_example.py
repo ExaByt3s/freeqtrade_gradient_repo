@@ -66,5 +66,4 @@ with strategy.scope():
     model = keras.Model(*model_fn())
     model.compile('sgd', 'categorical_crossentropy', metrics=['accuracy'])
     model.summary()
-    model.fit(x_train, y_train, epochs=3, batch_size=batch_size)
-    model.evaluate(x_test, y_test, batch_size=batch_size)
+    model.fit(x_train, y_train, epochs=3, batch_size=batch_size, validation_data=(x_test, y_test))
