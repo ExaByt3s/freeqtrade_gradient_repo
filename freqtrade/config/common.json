@@ -40,6 +40,7 @@
         "continual_learning": true,
         "save_backtest_models": true,
         "keras": true,
+        "model_save_type": "keras",
         "feature_parameters": {
             "include_timeframes": [
                 "5m",

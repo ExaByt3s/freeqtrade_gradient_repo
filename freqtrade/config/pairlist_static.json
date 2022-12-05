@@ -3,13 +3,13 @@
         {
             "method": "StaticPairList",
         },
-        {
-            "method": "AgeFilter",
-            "min_days_listed": 200,
-        },
-        {
-            "method": "OffsetFilter",
-            "number_assets": 100,
-        },
+        //{
+            //"method": "AgeFilter",
+            //"min_days_listed": 200,
+        //},
+        //{
+            //"method": "OffsetFilter",
+            //"number_assets": 100,
+        //},
     ],
 }

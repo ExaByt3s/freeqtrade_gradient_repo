@@ -3,3 +3,4 @@ export TF_POPLAR_FLAGS="--executable_cache_path=/tmp/poplar_exec --max_compilati
 
 alias e="${EDITOR}"
 alias edit="${EDITOR}"
+unset COLUMNS
