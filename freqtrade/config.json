@@ -1,7 +1,11 @@
 {
     "user_data_dir": "./user_data",
-    "strategy": "StrategyFreqtrade",
-    "strategy_path": "./strategy/",
+    //"strategy": "StrategyFreqtrade",
+    "strategy": "FreqaiExampleStrategy",
+    //"strategy_path": "./strategy/",
+    //"strategy_path": "./",
+    //"freqaimodel": "LightGBMRegressor",
+    "freqaimodel": "CNNPredictionModel",
     "add_config_files": [
         "config/common.json",
         "config/secret.json",
