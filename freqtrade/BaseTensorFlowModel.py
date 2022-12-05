@@ -17,15 +17,13 @@ class BaseTensorFlowModel(IFreqaiModel):
     User *must* inherit from this class and set fit() and predict().
     """
 
-    # def __init__(self, **kwargs):
-        # super().__init__(config=kwargs['config'])
-    def __init__(self, config: dict, **kwargs) -> None:
+    def __init__(self, config: dict) -> None:
         super().__init__(config=config)
         self.keras = True
+
         if self.ft_params.get("DI_threshold", 0):
             self.ft_params["DI_threshold"] = 0
             logger.warning("DI threshold is not configured for Keras models yet. Deactivating.")
-        print('called BaseTensorFlowModel')
 
     def train(
         self, unfiltered_df: DataFrame, pair: str, dk: FreqaiDataKitchen, **kwargs

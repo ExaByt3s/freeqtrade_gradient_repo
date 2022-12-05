@@ -1,7 +1,8 @@
 {
-    "user_data_dir": "./user_data",
+    //"user_data_dir": "./user_data",
     //"strategy": "StrategyFreqtrade",
-    "strategy": "FreqaiExampleStrategy",
+    //"strategy": "FreqaiExampleStrategy",
+    "strategy": "Strategy",
     //"strategy_path": "./strategy/",
     //"strategy_path": "./",
     //"freqaimodel": "LightGBMRegressor",

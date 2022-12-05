@@ -29,10 +29,6 @@ class CNNPredictionModel(BaseTensorFlowModel):
         super().__init__(config)
         self.CONV_WIDTH = 20
 
-    # def __init__(self, **kwargs):
-        # # super().__init__()
-        # print('called CNNPredictionModel')
-
     def fit(self, data_dictionary: Dict[str, Any], dk: FreqaiDataKitchen) -> Any:
         """
         User sets up the training and test data to fit their desired model here
@@ -45,7 +41,6 @@ class CNNPredictionModel(BaseTensorFlowModel):
         test_df = data_dictionary["test_features"]
         test_labels = data_dictionary["test_labels"]
         n_labels = len(train_labels.columns)
-        # print(test_labels)
 
         if n_labels > 1:
             raise OperationalException(
