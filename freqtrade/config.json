@@ -6,7 +6,7 @@
     //"strategy_path": "./strategy/",
     //"strategy_path": "./",
     //"freqaimodel": "LightGBMRegressor",
-    "freqaimodel": "CNNPredictionModel",
+    "freqaimodel": "CNNPredictionModel2",
     "add_config_files": [
         "config/common.json",
         "config/secret.json",

@@ -1,13 +1,14 @@
 import logging
 from functools import reduce
 
+import numpy
 import pandas as pd
 import talib.abstract as ta
 from pandas import DataFrame
 from technical import qtpylib
 from freqtrade.strategy import CategoricalParameter, IStrategy, merge_informative_pair
 
-import generate_answer
+import generate_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,16 @@ class Strategy(IStrategy):
     canonical freqtrade configuration file under config['freqai'].
     """
 
-    minimal_roi = {"0": 0.1, "240": -1}
+    # Disable ROI
+    # minimal_roi = {"0": 0.1, "240": -1}
+    minimal_roi: dict[str, int] = {
+        '0': 10000  # 10000 * 100%
+    }
+
+    # Disable stoploss
+    # stoploss: float = -1.00  # -100%
+    stoploss: float = -0.04  # -4%
+
 
     plot_config = {
         "main_plot": {},
@@ -35,12 +45,12 @@ class Strategy(IStrategy):
         },
     }
 
-    process_only_new_candles = True
-    stoploss = -0.05
-    use_exit_signal = True
+    # process_only_new_candles = True
+    # stoploss = -0.05
+    # use_exit_signal = True
     # this is the maximum period fed to talib (timeframe independent)
     startup_candle_count: int = 40
-    can_short = False
+    # can_short = False
 
     std_dev_multiplier_buy = CategoricalParameter(
         [0.75, 1, 1.25, 1.5, 1.75], default=1.25, space="buy", optimize=True)
@@ -130,23 +140,28 @@ class Strategy(IStrategy):
             df["%-hour_of_day"] = (df["date"].dt.hour + 1) / 25
 
             # user adds targets here by prepending them with &- (see convention below)
-            '''
-            df["&-s_close"] = (
-                df["close"]
-                .shift(-self.freqai_info["feature_parameters"]["label_period_candles"])
-                .rolling(self.freqai_info["feature_parameters"]["label_period_candles"])
-                .mean()
-                / df["close"]
-                - 1
-            )
-            '''
+            # print(self.freqai_info["feature_parameters"]["label_period_candles"])
+            # df["&-s_close"] = (
+                # df["close"]
+                # .shift(-self.freqai_info["feature_parameters"]["label_period_candles"])
+                # .rolling(self.freqai_info["feature_parameters"]["label_period_candles"])
+                # .mean()
+                # / df["close"]
+                # - 1
+            # )
+            # print(df["&-s_close"].to_markdown())
+
+            df['%-close'] = df['close']
+            df['%-volume'] = df['volume']
+
             dataframe = df
             threshold = 0.04
-            dataframe[f'&-s_close{threshold}'] = generate_answer.generate_answer_v2(dataframe['close'].to_numpy(), threshold=threshold, enum_unknown=-1, enum_up=1, enum_down=0)
-
+            dataframe[f'&-s_close0.04'] = generate_dataset._generate_answer(dataframe['close'].to_numpy(), threshold=threshold,
+                                                                            enum_unknown=-1, enum_up=1, enum_down=0)
             # Classifiers are typically set up with strings as targets:
-            # df['&s-up_or_down'] = np.where( df["close"].shift(-100) >
-            #                                 df["close"], 'up', 'down')
+            # df['&s-up_or_down'] = numpy.where( df["close"].shift(-100) > df["close"], 'up', 'down')
+            # print(df[['date', '&s-up_or_down']].to_markdown())
+            # print(df[['date', '&s-up_or_down']])
 
             # If user wishes to use multiple targets, they can add more by
             # appending more columns with '&'. User should keep in mind that multi targets
@@ -178,22 +193,45 @@ class Strategy(IStrategy):
         # `populate_any_indicators()` for each training period.
 
         dataframe = self.freqai.start(dataframe, metadata, self)
-        for val in self.std_dev_multiplier_buy.range:
-            dataframe[f'target_roi_{val}'] = (
-                dataframe["&-s_close_mean"] + dataframe["&-s_close_std"] * val
-                )
-        for val in self.std_dev_multiplier_sell.range:
-            dataframe[f'sell_roi_{val}'] = (
-                dataframe["&-s_close_mean"] - dataframe["&-s_close_std"] * val
-                )
+        # for val in self.std_dev_multiplier_buy.range:
+            # dataframe[f'target_roi_{val}'] = (
+                # dataframe["&-s_close_mean"] + dataframe["&-s_close_std"] * val
+                # )
+        # for val in self.std_dev_multiplier_sell.range:
+            # dataframe[f'sell_roi_{val}'] = (
+                # dataframe["&-s_close_mean"] - dataframe["&-s_close_std"] * val
+                # )
         return dataframe
 
     def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
 
+        # enter_long_conditions = [
+            # df["do_predict"] == 1,
+            # df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"],
+            # ]
+#
+        # if enter_long_conditions:
+            # df.loc[
+                # reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]
+            # ] = (1, "long")
+#
+        # enter_short_conditions = [
+            # df["do_predict"] == 1,
+            # df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"],
+            # ]
+#
+        # if enter_short_conditions:
+            # df.loc[
+                # reduce(lambda x, y: x & y, enter_short_conditions), ["enter_short", "enter_tag"]
+            # ] = (1, "short")
+
+        # print(df[['date', 'do_predict', '&-s_close0.04']].to_markdown())
+        # print(df["&-s_close"].to_markdown())
+
         enter_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"],
-            ]
+            df["&-s_close0.04"] == 1,
+        ]
 
         if enter_long_conditions:
             df.loc[
@@ -202,27 +240,39 @@ class Strategy(IStrategy):
 
         enter_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"],
+            df["&-s_close0.04"] == 0,
             ]
 
         if enter_short_conditions:
             df.loc[
                 reduce(lambda x, y: x & y, enter_short_conditions), ["enter_short", "enter_tag"]
             ] = (1, "short")
-
         return df
 
     def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
+        # exit_long_conditions = [
+            # df["do_predict"] == 1,
+            # df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"] * 0.25,
+            # ]
+        # if exit_long_conditions:
+            # df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
+#
+        # exit_short_conditions = [
+            # df["do_predict"] == 1,
+            # df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"] * 0.25,
+            # ]
+        # if exit_short_conditions:
+            # df.loc[reduce(lambda x, y: x & y, exit_short_conditions), "exit_short"] = 1
         exit_long_conditions = [
             df["do_predict"] == 1,
-            df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"] * 0.25,
+            df["&-s_close0.04"] == 0,
             ]
         if exit_long_conditions:
             df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
 
         exit_short_conditions = [
             df["do_predict"] == 1,
-            df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"] * 0.25,
+            df["&-s_close0.04"] == 1,
             ]
         if exit_short_conditions:
             df.loc[reduce(lambda x, y: x & y, exit_short_conditions), "exit_short"] = 1

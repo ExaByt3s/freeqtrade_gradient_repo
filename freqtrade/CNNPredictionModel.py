@@ -55,7 +55,7 @@ class CNNPredictionModel(BaseTensorFlowModel):
         w1 = WindowGenerator(
             input_width=self.CONV_WIDTH,
             label_width=1,
-            shift=1,
+            shift=0,
             train_df=train_df,
             val_df=test_df,
             train_labels=train_labels,
@@ -126,17 +126,11 @@ class CNNPredictionModel(BaseTensorFlowModel):
             w1 = WindowGenerator(
                 input_width=self.CONV_WIDTH,
                 label_width=1,
-                shift=1,
+                shift=0,
                 test_df=full_df,
                 batch_size=len(full_df),
             )
-            # print(w1)
-            # print(type(w1))
-
             predictions = self.model.predict(w1.inference)
-            len_diff = len(dk.do_predict) - len(predictions)
-            if len_diff > 0:
-                dk.do_predict = dk.do_predict[len_diff:]
 
         else:
             data = dk.data_dictionary["prediction_features"]
@@ -145,10 +139,9 @@ class CNNPredictionModel(BaseTensorFlowModel):
 
         predictions = predictions[:, 0, 0]
         pred_df = DataFrame(predictions, columns=dk.label_list)
-
         pred_df = dk.denormalize_labels_from_metadata(pred_df)
-
-        return (pred_df, np.ones(len(pred_df)))
+        do_predict = np.ones(len(pred_df))
+        return (pred_df, do_predict)
 
     def create_model(self, input_dims, n_labels) -> Any:
 

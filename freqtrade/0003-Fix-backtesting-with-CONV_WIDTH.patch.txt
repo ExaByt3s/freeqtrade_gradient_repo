@@ -1,0 +1,50 @@
+diff --git a/freqtrade/freqai/freqai_interface.py b/freqtrade/freqai/freqai_interface.py
+index 3386d2881..39df0b227 100644
+--- a/freqtrade/freqai/freqai_interface.py
++++ b/freqtrade/freqai/freqai_interface.py
+@@ -277,6 +277,11 @@ class IFreqaiModel(ABC):
+         # following tr_train. Both of these windows slide through the
+         # entire backtest
+         for tr_train, tr_backtest in zip(dk.training_timeranges, dk.backtesting_timeranges):
++            if self.CONV_WIDTH - 1 > 0:
++                seconds = self.base_tf_seconds * (self.CONV_WIDTH - 1)
++                tr_train.subtract_start(seconds=seconds)
++                tr_backtest.subtract_start(seconds=seconds)
++
+             pair = metadata["pair"]
+             (_, _, _) = self.dd.get_pair_dict_info(pair)
+             train_it += 1
+@@ -323,7 +328,20 @@ class IFreqaiModel(ABC):
+                     self.model = self.dd.load_data(pair, dk)
+ 
+                 pred_df, do_preds = self.predict(dataframe_backtest, dk)
+-                append_df = dk.get_predictions_to_append(pred_df, do_preds, dataframe_backtest)
++
++                if not (
++                    len(pred_df) == len(do_preds) == len(dataframe_backtest[self.CONV_WIDTH - 1:])
++                ):
++                    raise Exception(
++                        'Did not match: '
++                        'len(pred_df), len(do_preds), '
++                        'len(dataframe_backtest[self.CONV_WIDTH - 1:]): '
++                        f'{len(pred_df)}, {len(do_preds)}, '
++                        f'{len(dataframe_backtest[self.CONV_WIDTH - 1:])}'
++                    )
++
++                append_df = dk.get_predictions_to_append(pred_df, do_preds,
++                                                         dataframe_backtest[self.CONV_WIDTH - 1:])
+                 dk.append_predictions(append_df)
+                 dk.save_backtesting_prediction(append_df)
+ 
+@@ -440,6 +458,11 @@ class IFreqaiModel(ABC):
+         else:
+             # remaining predictions are made only on the most recent candles for performance and
+             # historical accuracy reasons.
++            logger.info(
++                f'CONV_WIDTH: {self.CONV_WIDTH}:'
++                ' remaining predictions are made only on the most recent candles'
++                ' for performance and historical accuracy reasons.'
++            )
+             pred_df, do_preds = self.predict(dataframe.iloc[-self.CONV_WIDTH:], dk, first=False)
+ 
+         if self.freqai_info.get('fit_live_predictions_candles', 0) and self.live:

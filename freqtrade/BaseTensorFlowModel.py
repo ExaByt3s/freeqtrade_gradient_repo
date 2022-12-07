@@ -39,6 +39,8 @@ class BaseTensorFlowModel(IFreqaiModel):
 
         logger.info(f"-------------------- Starting training {pair} --------------------")
 
+        # print(unfiltered_df)
+        # print(list(unfiltered_df))
         start_time = time()
 
         # filter the features requested by user in the configuration file and elegantly handle NaNs
@@ -64,6 +66,7 @@ class BaseTensorFlowModel(IFreqaiModel):
         )
         logger.info(f"Training model on {len(data_dictionary['train_features'])} data points")
 
+        data_dictionary['unfiltered_df'] = unfiltered_df
         model = self.fit(data_dictionary, dk)
 
         end_time = time()
@@ -106,7 +109,10 @@ class WindowGenerator:
     def make_dataset(self, data, labels=None):
         data = np.array(data, dtype=np.float32)
         if labels is not None:
+            # print(labels)
+            # print(labels.shape)  # , labels.dtype
             labels = np.array(labels, dtype=np.float32)
+
         ds = tf.keras.preprocessing.timeseries_dataset_from_array(
             data=data,
             targets=labels,
