@@ -25,8 +25,8 @@ class Strategy(IStrategy):
     """
 
     # Disable ROI
-    # minimal_roi = {"0": 0.1, "240": -1}
-    minimal_roi: dict[str, int] = {
+    # minimal_roi: dict[str, int] = {
+    minimal_roi: dict = {
         '0': 10000  # 10000 * 100%
     }
 

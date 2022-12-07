@@ -86,7 +86,7 @@ class CNNPredictionModel2(BaseTensorFlowModel):
             generate_dataset.generate_dataset(dataframe.to_numpy(dtype='float32'),
                                               dataframe['%-close'].to_numpy(dtype='float32'),
                                               (dataframe['%-volume'] > 0).to_numpy(dtype='bool'), window=self.CONV_WIDTH,
-                                              threshold=0.02, batch_size=batch_size, split_ratio=0.8, train_include_test=True)
+                                              threshold=0.04, batch_size=batch_size, split_ratio=0.8, train_include_test=True)
         )
         if len(x_train) == 0 or len(x_test) == 0:
             raise Exception
@@ -127,7 +127,8 @@ class CNNPredictionModel2(BaseTensorFlowModel):
             model.compile(
                 optimizer=tf.optimizers.Adam(lr_schedule),
                 # loss=tf.losses.MeanSquaredError(),
-                loss='categorical_crossentropy',
+                # loss='categorical_crossentropy',
+                loss='mean_squared_error',
                 # metrics=[tf.metrics.MeanAbsoluteError()],
                 # metrics=[tf.metrics.MeanSquaredError()],
                 metrics=['accuracy'],
@@ -212,7 +213,7 @@ class CNNPredictionModel2(BaseTensorFlowModel):
 
         input_layer = Input(shape=(input_dims[0], input_dims[1]))
         x = Flatten()(input_layer)  # inputs
-        x = Dense(32)(x)
+        x = Dense(512)(x)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Dense(32)(x)
