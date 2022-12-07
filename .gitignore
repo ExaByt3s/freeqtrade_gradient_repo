@@ -1,3 +1,5 @@
 __pycache__/
 freqtrade/user_data/backtest_results/
 freqtrade/user_data/models/
+freqtrade/secret.sh
+freqtrade/tradesv3.dryrun.sqlite
