@@ -1,28 +1,126 @@
+import json
 import logging
+import math
+import os
+import sys
+import time
+from datetime import datetime
 from functools import reduce
+from typing import Literal, Optional, Union
 
-import numpy
+# import numpy
 import pandas as pd
 import talib.abstract as ta
+from freqtrade.persistence import Trade
+from freqtrade.strategy import IStrategy, merge_informative_pair
 from pandas import DataFrame
 from technical import qtpylib
-from freqtrade.strategy import CategoricalParameter, IStrategy, merge_informative_pair
 
-import generate_dataset
+# log = logging.getLogger(__name__)
+# log.setLevel(logging.DEBUG)
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+log_level: Literal[0, 1, 2] = 2
 
+if log_level == 2:
+    log.setLevel(logging.DEBUG)
+elif log_level == 1:
+    log.setLevel(logging.INFO)
+elif log_level == 0:
+    log.setLevel(logging.ERROR)
+
+# See https://stackoverflow.com/questions/46807204/python-logging-duplicated
+# See https://stackoverflow.com/questions/14058453/making-python-loggers-output-all-messages-to-stdout-in-addition-to-log-file
+if not log.handlers:
+    sh = logging.StreamHandler(sys.stderr)
+    sh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s() %(message)s'))
+    log.addHandler(sh)
+
+log.propagate = False
+
+def json_dumps(object_: dict) -> str:
+    return json.dumps(object_, indent=4, default=list, sort_keys=True)
 
 class Strategy(IStrategy):
-    """
-    Example strategy showing how the user connects their own
-    IFreqaiModel to the strategy. Namely, the user uses:
-    self.freqai.start(dataframe, metadata)
+    def __init__(self, config: dict) -> None:
+        super().__init__(config=config)
+        self.path_runtime = './runtime.json'
+        self.indent = 4
+        self.threshold = [0.04]
 
-    to make predictions on their data. populate_any_indicators() automatically
-    generates the variety of features indicated by the user in the
-    canonical freqtrade configuration file under config['freqai'].
-    """
+    def runtime_write(self) -> None:
+        with open(self.path_runtime, mode='w') as file:
+            json.dump(self.runtime, file, indent=self.indent, sort_keys=True)
+
+    def runtime_load(self) -> None:
+        with open(self.path_runtime, mode='r') as file:
+            self.runtime = json.load(file)
+
+    def runtime_pair_initial(self) -> dict:
+        return {
+            'stoploss': None,
+            'takeprofit': None,
+        }
+
+    def runtime_pair_reset(self, pair: str) -> None:
+        if pair not in self.runtime:
+            raise Exception
+
+        self.runtime[pair] = self.runtime_pair_initial()
+
+    def runtime_update(self, list_pair: list[str]) -> None:
+        runtime_old = self.runtime
+        self.runtime = {}
+
+        for pair in runtime_old:
+            if runtime_old[pair] != self.runtime_pair_initial():
+                self.runtime[pair] = runtime_old[pair]
+
+        for pair in list_pair:
+            if pair not in self.runtime:
+                self.runtime[pair] = self.runtime_pair_initial()
+
+    def bot_start(self, **kwargs) -> None:
+        time_begin = time.perf_counter()
+
+        if not self.dp:
+            raise Exception('DataProvider is required')
+
+        if self.dp.runmode.value == 'hyperopt':
+            raise Exception('Hyperopt is not supported')
+
+        if self.dp.runmode.value in ['dry_run', 'live']:
+            if os.path.isfile(self.path_runtime):
+                self.runtime_load()
+            else:
+                self.runtime = {}
+
+        elif self.dp.runmode.value == 'backtest':
+            self.runtime = {}
+
+        list_pair = self.dp.current_whitelist()
+        self.runtime_update(list_pair)
+        log.debug(f'runtime:\n{json_dumps(self.runtime)}')
+
+        time_end = time.perf_counter()
+        log.info(
+            f'runmode:{self.dp.runmode.value}'
+            f' timeframe:{self.timeframe}'
+            f' {time_end - time_begin:0.4f} (second)'
+        )
+
+    def bot_loop_start(self, **kwargs) -> None:
+        time_begin = time.perf_counter()
+
+        if self.dp.runmode.value in ['dry_run', 'live']:
+            self.runtime_write()
+
+        time_end = time.perf_counter()
+        log.info(
+            f'runmode:{self.dp.runmode.value}'
+            f' timeframe:{self.timeframe}'
+            f' {time_end - time_begin:0.4f} (second)'
+        )
 
     # Disable ROI
     # minimal_roi: dict[str, int] = {
@@ -34,49 +132,20 @@ class Strategy(IStrategy):
     # stoploss: float = -1.00  # -100%
     stoploss: float = -0.04  # -4%
 
-
     plot_config = {
         "main_plot": {},
         "subplots": {
-            "prediction": {"prediction": {"color": "blue"}},
             "do_predict": {
                 "do_predict": {"color": "brown"},
             },
         },
     }
 
-    # process_only_new_candles = True
-    # stoploss = -0.05
-    # use_exit_signal = True
     # this is the maximum period fed to talib (timeframe independent)
     startup_candle_count: int = 40
-    # can_short = False
 
-    std_dev_multiplier_buy = CategoricalParameter(
-        [0.75, 1, 1.25, 1.5, 1.75], default=1.25, space="buy", optimize=True)
-    std_dev_multiplier_sell = CategoricalParameter(
-        [0.75, 1, 1.25, 1.5, 1.75], space="sell", default=1.25, optimize=True)
-
-
-    # def populate_any_indicators(self, pair: str, df: DataFrame, tf: str,
-                                # informative: DataFrame = None,
-                                # set_generalized_indicators: bool = False) -> DataFrame:
-    def populate_any_indicators(
-        self, pair, df, tf, informative=None, set_generalized_indicators=False
-    ):
-        """
-        Function designed to automatically generate, name and merge features
-        from user indicated timeframes in the configuration file. User controls the indicators
-        passed to the training/prediction by prepending indicators with `'%-' + coin `
-        (see convention below). I.e. user should not prepend any supporting metrics
-        (e.g. bb_lowerband below) with % unless they explicitly want to pass that metric to the
-        model.
-        :param pair: pair to be used as informative
-        :param df: strategy dataframe which will receive merges from informatives
-        :param tf: timeframe of the dataframe which will modify the feature names
-        :param informative: the dataframe associated with the informative pair
-        """
-
+    def populate_any_indicators(self, pair: str, df: DataFrame, tf: str, informative: DataFrame = None,
+                                set_generalized_indicators: bool = False) -> DataFrame:
         coin = pair.split('/')[0]
 
         if informative is None:
@@ -113,10 +182,6 @@ class Strategy(IStrategy):
                 informative["volume"] / informative["volume"].rolling(t).mean()
             )
 
-        informative[f"%-{coin}pct-change"] = informative["close"].pct_change()
-        informative[f"%-{coin}raw_volume"] = informative["volume"]
-        informative[f"%-{coin}raw_price"] = informative["close"]
-
         indicators = [col for col in informative if col.startswith("%")]
         # This loop duplicates and shifts all indicators to add a sense of recency to data
         for n in range(self.freqai_info["feature_parameters"]["include_shifted_candles"] + 1):
@@ -136,148 +201,41 @@ class Strategy(IStrategy):
         # function to populate indicators during training). Notice how we ensure not to
         # add them multiple times
         if set_generalized_indicators:
-            df["%-day_of_week"] = (df["date"].dt.dayofweek + 1) / 7
-            df["%-hour_of_day"] = (df["date"].dt.hour + 1) / 25
-
-            # user adds targets here by prepending them with &- (see convention below)
-            # print(self.freqai_info["feature_parameters"]["label_period_candles"])
-            # df["&-s_close"] = (
-                # df["close"]
-                # .shift(-self.freqai_info["feature_parameters"]["label_period_candles"])
-                # .rolling(self.freqai_info["feature_parameters"]["label_period_candles"])
-                # .mean()
-                # / df["close"]
-                # - 1
-            # )
-            # print(df["&-s_close"].to_markdown())
-
-            df['%-close'] = df['close']
-            df['%-volume'] = df['volume']
+            df['%day_of_week'] = (df['date'].dt.dayofweek + 1) / 7
+            df['%hour_of_day'] = (df['date'].dt.hour + 1) / 25
 
             dataframe = df
-            threshold = 0.04
-            dataframe[f'&-s_close0.04'] = generate_dataset._generate_answer(dataframe['close'].to_numpy(), threshold=threshold,
-                                                                            enum_unknown=-1, enum_up=1, enum_down=0)
-            # Classifiers are typically set up with strings as targets:
-            # df['&s-up_or_down'] = numpy.where( df["close"].shift(-100) > df["close"], 'up', 'down')
-            # print(df[['date', '&s-up_or_down']].to_markdown())
-            # print(df[['date', '&s-up_or_down']])
+            dataframe['&prediction'] = 0
 
-            # If user wishes to use multiple targets, they can add more by
-            # appending more columns with '&'. User should keep in mind that multi targets
-            # requires a multioutput prediction model such as
-            # templates/CatboostPredictionMultiModel.py,
-
-            # df["&-s_range"] = (
-            #     df["close"]
-            #     .shift(-self.freqai_info["feature_parameters"]["label_period_candles"])
-            #     .rolling(self.freqai_info["feature_parameters"]["label_period_candles"])
-            #     .max()
-            #     -
-            #     df["close"]
-            #     .shift(-self.freqai_info["feature_parameters"]["label_period_candles"])
-            #     .rolling(self.freqai_info["feature_parameters"]["label_period_candles"])
-            #     .min()
-            # )
-
+        # print(df)
+        # print(list(df))
         return df
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-
-        # All indicators must be populated by populate_any_indicators() for live functionality
-        # to work correctly.
-
-        # the model will return all labels created by user in `populate_any_indicators`
-        # (& appended targets), an indication of whether or not the prediction should be accepted,
-        # the target mean/std values for each of the labels created by user in
-        # `populate_any_indicators()` for each training period.
-
         dataframe = self.freqai.start(dataframe, metadata, self)
-        # for val in self.std_dev_multiplier_buy.range:
-            # dataframe[f'target_roi_{val}'] = (
-                # dataframe["&-s_close_mean"] + dataframe["&-s_close_std"] * val
-                # )
-        # for val in self.std_dev_multiplier_sell.range:
-            # dataframe[f'sell_roi_{val}'] = (
-                # dataframe["&-s_close_mean"] - dataframe["&-s_close_std"] * val
-                # )
-        return dataframe
 
-    def populate_entry_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-
-        # enter_long_conditions = [
-            # df["do_predict"] == 1,
-            # df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"],
-            # ]
-#
-        # if enter_long_conditions:
-            # df.loc[
-                # reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]
-            # ] = (1, "long")
-#
-        # enter_short_conditions = [
-            # df["do_predict"] == 1,
-            # df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"],
-            # ]
-#
-        # if enter_short_conditions:
-            # df.loc[
-                # reduce(lambda x, y: x & y, enter_short_conditions), ["enter_short", "enter_tag"]
-            # ] = (1, "short")
-
-        # print(df[['date', 'do_predict', '&-s_close0.04']].to_markdown())
-        # print(df["&-s_close"].to_markdown())
-
+        # print(dataframe[['date', '']].to_markdown())
         enter_long_conditions = [
-            df["do_predict"] == 1,
-            df["&-s_close0.04"] == 1,
+            dataframe['do_predict'] == 1,
+            dataframe['&prediction'] == 1,
         ]
 
         if enter_long_conditions:
-            df.loc[
-                reduce(lambda x, y: x & y, enter_long_conditions), ["enter_long", "enter_tag"]
-            ] = (1, "long")
+            dataframe.loc[
+                reduce(lambda x, y: x & y, enter_long_conditions), ['enter_long', 'enter_tag']
+            ] = (1, dataframe['&prediction'].add_prefix('Long-'))
 
         enter_short_conditions = [
-            df["do_predict"] == 1,
-            df["&-s_close0.04"] == 0,
-            ]
+            dataframe['do_predict'] == 1,
+            dataframe['&prediction'] == 0,
+        ]
 
         if enter_short_conditions:
-            df.loc[
-                reduce(lambda x, y: x & y, enter_short_conditions), ["enter_short", "enter_tag"]
-            ] = (1, "short")
-        return df
+            dataframe.loc[
+                reduce(lambda x, y: x & y, enter_short_conditions), ['enter_short', 'enter_tag']
+            ] = (1, dataframe['&prediction'].add_prefix('Short-'))
 
-    def populate_exit_trend(self, df: DataFrame, metadata: dict) -> DataFrame:
-        # exit_long_conditions = [
-            # df["do_predict"] == 1,
-            # df["&-s_close"] < df[f"sell_roi_{self.std_dev_multiplier_sell.value}"] * 0.25,
-            # ]
-        # if exit_long_conditions:
-            # df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
-#
-        # exit_short_conditions = [
-            # df["do_predict"] == 1,
-            # df["&-s_close"] > df[f"target_roi_{self.std_dev_multiplier_buy.value}"] * 0.25,
-            # ]
-        # if exit_short_conditions:
-            # df.loc[reduce(lambda x, y: x & y, exit_short_conditions), "exit_short"] = 1
-        exit_long_conditions = [
-            df["do_predict"] == 1,
-            df["&-s_close0.04"] == 0,
-            ]
-        if exit_long_conditions:
-            df.loc[reduce(lambda x, y: x & y, exit_long_conditions), "exit_long"] = 1
-
-        exit_short_conditions = [
-            df["do_predict"] == 1,
-            df["&-s_close0.04"] == 1,
-            ]
-        if exit_short_conditions:
-            df.loc[reduce(lambda x, y: x & y, exit_short_conditions), "exit_short"] = 1
-
-        return df
+        return dataframe
 
     def confirm_trade_entry(
         self,
@@ -303,3 +261,116 @@ class Strategy(IStrategy):
                 return False
 
         return True
+
+    def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float, proposed_stake: float,
+                            min_stake: Optional[float], max_stake: float, leverage: float, entry_tag: Optional[str], side: str,
+                            **kwargs) -> float:
+
+        if min_stake > max_stake:
+            log.info(
+                f'Entry signal has skipped: min_stake > max_stake: {min_stake:0.4f} > {max_stake:0.4f}'
+            )
+            return 0.
+
+        initial_stake = self.stake_amount
+
+        if initial_stake < min_stake:
+            initial_stake = math.ceil(min_stake)
+
+        if initial_stake > max_stake:
+            log.info(
+                f'Entry signal has skipped: initial_stake > max_stake: {initial_stake:0.4f} > {max_stake:0.4f}'
+            )
+            return 0.
+
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        candle_last = dataframe.iloc[-1].squeeze()
+
+        if candle_last['&prediction'] == 0 or candle_last['&prediction'] == 1:
+            # self.threshold[]
+            self.runtime[pair] = {
+                'stoploss': -0.04,
+                'takeprofit': 0.04,
+            }
+
+        # log.debug(f'runtime:\n{json_dumps(self.runtime)}')
+
+        log.info(
+            f'current_time:{current_time}'
+            f' pair:{pair}'
+            f' (initial_stake/stake_amount):({initial_stake}/{self.stake_amount})'
+            f' side:{side}'
+            f' entry_tag:{entry_tag}'
+            f' min_stake:{min_stake:0.4f}'
+            f' max_stake:{max_stake:0.4f}'
+            f' current_rate:{current_rate:0.4f}'
+        )
+
+        return initial_stake
+
+    def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float,
+                    **kwargs) -> Optional[Union[str, bool]]:
+
+        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        candle_last = dataframe.iloc[-1].squeeze()
+
+        if ((trade.trade_direction == 'long' and candle_last['enter_long'] == 1)
+                or (trade.trade_direction == 'short' and candle_last['enter_short'] == 1)):
+
+            takeprofit_candidate = self.runtime[pair]['takeprofit'] + current_profit
+            stoploss_candidate = self.runtime[pair]['stoploss'] + current_profit
+
+            if takeprofit_candidate > self.runtime[pair]['takeprofit']:
+                self.runtime[pair]['takeprofit'] = takeprofit_candidate
+
+            if stoploss_candidate > self.runtime[pair]['stoploss']:
+                self.runtime[pair]['stoploss'] = stoploss_candidate
+
+        if current_profit > self.runtime[pair]['takeprofit']:
+            reason = f'takeprofit_{self.runtime[pair]["takeprofit"]:0.2f}'
+        elif current_profit < self.runtime[pair]['stoploss']:
+            reason = f'stoploss_{self.runtime[pair]["stoploss"]:0.2f}'
+        else:
+            return False
+
+        color_ansi: dict[str, str] = {
+            'black'  : '\x1b[0;30m',
+            'blue'   : '\x1b[0;34m',
+            'cyan'   : '\x1b[0;36m',
+            'green'  : '\x1b[0;32m',
+            'magenda': '\x1b[0;35m',
+            'red'    : '\x1b[0;31m',
+            'yellow' : '\x1b[0;33m',
+            'reset'  : '\x1b[0m'   ,
+        }
+
+        color_begin = ''
+        color_end = color_ansi['reset']
+
+        if current_profit > 0:
+            color_begin = color_ansi['green']
+        elif current_profit < 0:
+            color_begin = color_ansi['red']
+
+        # log.debug(f'runtime:\n{json_dumps(self.runtime)}')
+
+        log.info(
+            f'{color_begin}'
+            f'current_time:{current_time}'
+            f' pair:{pair}'
+            f' reason:{reason}'
+            f' current_profit:{current_profit}'
+            f' open_rate:{trade.open_rate:0.4f}'
+            f' current_rate:{current_rate:0.4f}'
+            f' timedelta:{current_time - trade.open_date_utc}'
+            f'{color_end}'
+        )
+
+        self.runtime_pair_reset(pair)
+        return reason
+
+    def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        return dataframe
+
+    def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        return dataframe

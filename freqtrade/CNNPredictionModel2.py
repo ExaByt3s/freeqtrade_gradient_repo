@@ -77,15 +77,17 @@ class CNNPredictionModel2(BaseTensorFlowModel):
         # )
 
         # dataframe = pandas.concat([train_df, test_df])
+        close = data_dictionary['unfiltered_df']['close']
+        volume = data_dictionary['unfiltered_df']['volume']
+
         dataframe = data_dictionary['unfiltered_df']
         dataframe = dataframe[dk.training_features_list]
         # print(list(dataframe))
         # print(dataframe['%-close'].to_markdown())
         # print(dataframe.to_markdown())
         x_train, y_train, x_test, y_test = (
-            generate_dataset.generate_dataset(dataframe.to_numpy(dtype='float32'),
-                                              dataframe['%-close'].to_numpy(dtype='float32'),
-                                              (dataframe['%-volume'] > 0).to_numpy(dtype='bool'), window=self.CONV_WIDTH,
+            generate_dataset.generate_dataset(dataframe.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
+                                              (volume > 0).to_numpy(dtype='bool'), window=self.CONV_WIDTH,
                                               threshold=0.04, batch_size=batch_size, split_ratio=0.8, train_include_test=True)
         )
         if len(x_train) == 0 or len(x_test) == 0:
@@ -134,11 +136,11 @@ class CNNPredictionModel2(BaseTensorFlowModel):
                 metrics=['accuracy'],
             )
             model.summary()
-            max_epochs = 100
+            max_epochs = 20
 
         else:
             logger.info('Update old model')
-            max_epochs = 20
+            max_epochs = 10
 
         model.fit(
             # w1.train,
@@ -213,7 +215,7 @@ class CNNPredictionModel2(BaseTensorFlowModel):
 
         input_layer = Input(shape=(input_dims[0], input_dims[1]))
         x = Flatten()(input_layer)  # inputs
-        x = Dense(512)(x)
+        x = Dense(32)(x)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Dense(32)(x)
