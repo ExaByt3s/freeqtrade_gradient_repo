@@ -68,7 +68,8 @@ class Strategy(IStrategy):
 
         self.runtime[pair] = self.runtime_pair_initial()
 
-    def runtime_update(self, list_pair: list[str]) -> None:
+    # def runtime_update(self, list_pair: list[str]) -> None:
+    def runtime_update(self, list_pair: list) -> None:
         runtime_old = self.runtime
         self.runtime = {}
 
@@ -100,7 +101,7 @@ class Strategy(IStrategy):
 
         list_pair = self.dp.current_whitelist()
         self.runtime_update(list_pair)
-        log.debug(f'runtime:\n{json_dumps(self.runtime)}')
+        # log.debug(f'runtime:\n{json_dumps(self.runtime)}')
 
         time_end = time.perf_counter()
         log.info(
@@ -311,14 +312,19 @@ class Strategy(IStrategy):
     def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float,
                     **kwargs) -> Optional[Union[str, bool]]:
 
+        # if current_profit > 0.04:
+            # print(current_profit)
+            
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         candle_last = dataframe.iloc[-1].squeeze()
 
         if ((trade.trade_direction == 'long' and candle_last['enter_long'] == 1)
                 or (trade.trade_direction == 'short' and candle_last['enter_short'] == 1)):
 
-            takeprofit_candidate = self.runtime[pair]['takeprofit'] + current_profit
-            stoploss_candidate = self.runtime[pair]['stoploss'] + current_profit
+            # takeprofit_candidate = self.runtime[pair]['takeprofit'] + current_profit
+            # stoploss_candidate = self.runtime[pair]['stoploss'] + current_profit
+            takeprofit_candidate = 0.04 + current_profit
+            stoploss_candidate = -0.04 + current_profit
 
             if takeprofit_candidate > self.runtime[pair]['takeprofit']:
                 self.runtime[pair]['takeprofit'] = takeprofit_candidate
@@ -333,7 +339,8 @@ class Strategy(IStrategy):
         else:
             return False
 
-        color_ansi: dict[str, str] = {
+        # color_ansi: dict[str, str] = {
+        color_ansi: dict = {
             'black'  : '\x1b[0;30m',
             'blue'   : '\x1b[0;34m',
             'cyan'   : '\x1b[0;36m',

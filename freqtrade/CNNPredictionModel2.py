@@ -136,7 +136,7 @@ class CNNPredictionModel2(BaseTensorFlowModel):
                 metrics=['accuracy'],
             )
             model.summary()
-            max_epochs = 20
+            max_epochs = 200
 
         else:
             logger.info('Update old model')
@@ -215,7 +215,7 @@ class CNNPredictionModel2(BaseTensorFlowModel):
 
         input_layer = Input(shape=(input_dims[0], input_dims[1]))
         x = Flatten()(input_layer)  # inputs
-        x = Dense(32)(x)
+        x = Dense(128)(x)
         x = BatchNormalization()(x)
         x = Activation('relu')(x)
         x = Dense(32)(x)
