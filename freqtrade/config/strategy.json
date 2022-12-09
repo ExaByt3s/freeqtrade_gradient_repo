@@ -5,7 +5,7 @@
     "freqaimodel": "CNNPredictionModel2",
     "freqai": {
         "enabled": true,
-        "train_period_days": 200,
+        "train_period_days": 20,
         "backtest_period_days": 0.125,
         "identifier": "unique-id",
         "live_retrain_hours": 0,
@@ -26,7 +26,7 @@
                 "ETH/USDT",
             ],
             "label_period_candles": 20,
-            "include_shifted_candles": 2,
+            "include_shifted_candles": 0,
             "indicator_periods_candles": [
                 100,
                 200,

@@ -65,15 +65,15 @@ print(len(y_test))
 
 sys.exit()
 
-# def add_indicator(dataframe: DataFrame) -> DataFrame:
-    # dataframe['heikin-ashi_close'] = (dataframe['open'] + dataframe['high'] + dataframe['low'] + dataframe['close']) / 4
-    # dataframe['moving_average_simple_200'] = indicator.moving_average_simple(dataframe['heikin-ashi_close'].to_numpy(), window=200)
-    # dataframe['regression_1_200'] = indicator.regression_1(dataframe['heikin-ashi_close'].to_numpy(), window=200)
-    # dataframe['EMA200'] = ta.EMA(dataframe['heikin-ashi_close'], timeperiod=200)
-    # dataframe['WMA200'] = ta.WMA(dataframe['heikin-ashi_close'], timeperiod=200)
-    # # dataframe'RSI9'] = ta.RSI(dataframe['heikin-ashi_close'], timeperiod=9)
-    # dataframe['HMA200'] = qtpylib.hma(dataframe['heikin-ashi_close'], window=200)
-    # return dataframe
+def add_indicator(dataframe: DataFrame) -> DataFrame:
+    dataframe['heikin-ashi_close'] = (dataframe['open'] + dataframe['high'] + dataframe['low'] + dataframe['close']) / 4
+    dataframe['moving_average_simple_200'] = indicator.moving_average_simple(dataframe['heikin-ashi_close'].to_numpy(), window=200)
+    dataframe['regression_1_200'] = indicator.regression_1(dataframe['heikin-ashi_close'].to_numpy(), window=200)
+    dataframe['EMA200'] = ta.EMA(dataframe['heikin-ashi_close'], timeperiod=200)
+    dataframe['WMA200'] = ta.WMA(dataframe['heikin-ashi_close'], timeperiod=200)
+    # dataframe'RSI9'] = ta.RSI(dataframe['heikin-ashi_close'], timeperiod=9)
+    dataframe['HMA200'] = qtpylib.hma(dataframe['heikin-ashi_close'], window=200)
+    return dataframe
 #
 # def add_information(dataframe_information: DataFrame, dataframe: DataFrame, pair: str) -> DataFrame:
     # column = dataframe.columns.tolist()

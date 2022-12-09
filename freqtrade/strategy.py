@@ -16,9 +16,10 @@ from freqtrade.strategy import IStrategy, merge_informative_pair
 from pandas import DataFrame
 from technical import qtpylib
 
+import indicator
+
 # log = logging.getLogger(__name__)
 # log.setLevel(logging.DEBUG)
-
 log = logging.getLogger(__name__)
 log_level: Literal[0, 1, 2] = 2
 
@@ -145,6 +146,7 @@ class Strategy(IStrategy):
     # this is the maximum period fed to talib (timeframe independent)
     startup_candle_count: int = 40
 
+    '''
     def populate_any_indicators(self, pair: str, df: DataFrame, tf: str, informative: DataFrame = None,
                                 set_generalized_indicators: bool = False) -> DataFrame:
         coin = pair.split('/')[0]
@@ -211,6 +213,80 @@ class Strategy(IStrategy):
         # print(df)
         # print(list(df))
         return df
+    '''
+
+    def populate_any_indicators(self, pair: str, dataframe: DataFrame, timeframe: str, informative: DataFrame = None,
+                                set_generalized_indicators: bool = False) -> DataFrame:
+        coin = pair.split('/')[0]
+
+        if informative is None:
+            informative = self.dp.get_pair_dataframe(pair, timeframe)
+
+        for t in self.freqai_info['feature_parameters']['indicator_periods_candles']:
+
+            t = int(t)
+            # informative[f'%{coin}-rsi-period_{t}'] = ta.RSI(informative, timeperiod=t)
+            # informative[f'%{coin}-mfi-period_{t}'] = ta.MFI(informative, timeperiod=t)
+            # informative[f'%{coin}-adx-period_{t}'] = ta.ADX(informative, timeperiod=t)
+            # informative[f'%{coin}-sma-period_{t}'] = ta.SMA(informative, timeperiod=t)
+            # informative[f'%{coin}-ema-period_{t}'] = ta.EMA(informative, timeperiod=t)
+            # bollinger = qtpylib.bollinger_bands(
+                # qtpylib.typical_price(informative), window=t, stds=2.2
+            # )
+            # informative[f'{coin}-bb_lowerband-period_{t}'] = bollinger['lower']
+            # informative[f'{coin}-bb_middleband-period_{t}'] = bollinger['mid']
+            # informative[f'{coin}-bb_upperband-period_{t}'] = bollinger['upper']
+            # informative[f'%{coin}-bb_width-period_{t}'] = (
+                # informative[f'{coin}-bb_upperband-period_{t}']
+                # - informative[f'{coin}-bb_lowerband-period_{t}']
+            # ) / informative[f'{coin}-bb_middleband-period_{t}']
+            # informative[f'%{coin}-close-bb_lower-period_{t}'] = (
+                # informative['close'] / informative[f'{coin}-bb_lowerband-period_{t}']
+            # )
+            # informative[f'%{coin}-roc-period_{t}'] = ta.ROC(informative, timeperiod=t)
+            # informative[f'%{coin}-relative_volume-period_{t}'] = (
+                # informative['volume'] / informative['volume'].rolling(t).mean()
+            # )
+            informative[f'{coin}-heikin_ashi-close'] = (
+                (informative['open'] + informative['high'] + informative['low'] + informative['close']) / 4
+            )
+            informative[f'{coin}-Group1-moving_average_simple-{t}'] = (
+                indicator.moving_average_simple(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
+            )
+            informative[f'{coin}-Group1-regression_1-{t}'] = (
+                indicator.regression_1(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
+            )
+            informative[f'{coin}-Group1-EMA-{t}'] = ta.EMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
+            informative[f'{coin}-Group1-WMA-{t}'] = ta.WMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
+            informative[f'{coin}-Group1-HMA-{t}'] = qtpylib.hma(informative[f'{coin}-heikin_ashi-close'], window=t)
+
+            column_group1 = [column for column in informative if column.startswith(f'{coin}-Group1-')]
+            column = column_group1
+            for i in range(len(column)):
+                for j in range(i + 1, len(column)):
+                    # informative[f'%({column[i]} - {column[j]})'] = informative[column[i]] - informative[column[j]]
+                    informative[f'%({column[i]} / {column[j]})'] = informative[column[i]] / informative[column[j]]
+
+        indicators = [col for col in informative if col.startswith('%')]
+        for n in range(self.freqai_info['feature_parameters']['include_shifted_candles'] + 1):
+            if n == 0:
+                continue
+            informative_shift = informative[indicators].shift(n)
+            informative_shift = informative_shift.add_suffix('_shift-' + str(n))
+            informative = pd.concat((informative, informative_shift), axis=1)
+
+        dataframe = merge_informative_pair(dataframe, informative, self.config['timeframe'], timeframe, ffill=True)
+        skip_columns = [
+            (s + '_' + timeframe) for s in ['date', 'open', 'high', 'low', 'close', 'volume']
+        ]
+        dataframe = dataframe.drop(columns=skip_columns)
+
+        if set_generalized_indicators:
+            # dataframe['%day_of_week'] = (dataframe['date'].dt.dayofweek + 1) / 7
+            # dataframe['%hour_of_day'] = (dataframe['date'].dt.hour + 1) / 25
+            dataframe['&prediction'] = 0
+
+        return dataframe
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe = self.freqai.start(dataframe, metadata, self)
@@ -312,17 +388,12 @@ class Strategy(IStrategy):
     def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float,
                     **kwargs) -> Optional[Union[str, bool]]:
 
-        # if current_profit > 0.04:
-            # print(current_profit)
-            
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         candle_last = dataframe.iloc[-1].squeeze()
 
         if ((trade.trade_direction == 'long' and candle_last['enter_long'] == 1)
                 or (trade.trade_direction == 'short' and candle_last['enter_short'] == 1)):
 
-            # takeprofit_candidate = self.runtime[pair]['takeprofit'] + current_profit
-            # stoploss_candidate = self.runtime[pair]['stoploss'] + current_profit
             takeprofit_candidate = 0.04 + current_profit
             stoploss_candidate = -0.04 + current_profit
 
