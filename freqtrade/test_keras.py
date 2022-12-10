@@ -21,7 +21,6 @@ from tensorflow.keras.layers import (
     Concatenate,
 )
 
-# sys.exit()
 from tensorflow.keras.layers import Layer
 from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization# , DenseInputBias, DenseAverage
 
@@ -97,7 +96,7 @@ def define_model():
     model = CustomModel()  # inputs=inputs, outputs=x
     '''
 
-    inputs = Input(shape=(200, 10))
+    inputs = Input(shape=(2000, 1))
 
     '''
     x = Flatten()(inputs)
@@ -128,10 +127,10 @@ def define_model():
 
     x = Flatten()(inputs)
     x = Dense(1024)(x)
-    x = BatchNormalization()(x)
+    # x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(1024)(x)
-    x = BatchNormalization()(x)
+    # x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
@@ -234,6 +233,10 @@ print(f'device: {tf.config.list_logical_devices()}')
 
 from tensorflow.keras.optimizers import Adam
 
+from load_data import load_data
+
+x_train, y_train, x_test, y_test = load_data()
+print(x_train.shape, x_test.shape)
 
 with strategy_scope:
     # data_train = strategy.experimental_distribute_dataset(data_train)

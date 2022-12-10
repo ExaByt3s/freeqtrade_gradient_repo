@@ -17,7 +17,7 @@ def column_label(dataframe: DataFrame) -> list[str]:
 
 def load_data(return_column_feature: bool = False):  # timerange: str
     config = Configuration.from_files(['./config.json'])
-    config['timerange'] = '20210801-20220101'
+    config['timerange'] = '20210601-20220101'
     pair = 'ETH/USDT'
 
     strategy = StrategyResolver.load_strategy(config=config)
@@ -38,8 +38,9 @@ def load_data(return_column_feature: bool = False):  # timerange: str
 
     x_train, y_train, x_test, y_test = (
         generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
-                                          (volume > 0).to_numpy(dtype='bool'), window=1,
-                                          threshold=0.04, batch_size=64, split_ratio=0.8, train_include_test=False)
+                                          (volume > 0).to_numpy(dtype='bool'), window=2000,
+                                          threshold=0.01, batch_size=64, split_ratio=0.8, train_include_test=False,
+                                          enable_window_nomalization=True)
     )
 
     if len(x_train) == 0 or len(x_test) == 0:

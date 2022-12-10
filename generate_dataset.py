@@ -118,10 +118,23 @@ def _reduce_mask(a: ndarray, mask: ndarray) -> ndarray:
 def _make_divisible(number: int, divisor: int) -> int:
     return number - (number % divisor)
 
-@jit()
+# @jit(inline='always')
+def _window_nomalization(input_a: ndarray, threshold_scale: float = 0.005) -> ndarray:
+
+    if len(input_a.shape) != 3:
+        raise Exception
+
+    window_maximum = numpy.amax(input_a, axis=1) * (1 + threshold_scale)
+    window_minimum = numpy.amin(input_a, axis=1) * (1 - threshold_scale)
+    window_maximum = numpy.repeat(window_maximum, input_a.shape[1], axis=0).reshape(input_a.shape)
+    window_minimum = numpy.repeat(window_minimum, input_a.shape[1], axis=0).reshape(input_a.shape)
+    result = (input_a - window_minimum) / (window_maximum - window_minimum)
+    return result
+
+# @jit()
 def generate_dataset(input_info: ndarray, input_close: ndarray, input_mask: ndarray, window: int = 200,
-                     threshold: float = 0.04, batch_size: int = 200, split_ratio: float = 0.8, train_include_test: bool = False
-                     ) -> (ndarray, ndarray, ndarray, ndarray):  # , input_mask: Optional[ndarray] = None
+                     threshold: float = 0.04, batch_size: int = 200, split_ratio: float = 0.8, train_include_test: bool = False,
+                     enable_window_nomalization: bool = False) -> (ndarray, ndarray, ndarray, ndarray):  # , input_mask: Optional[ndarray] = None
 
     if len(input_info.shape) != 2:
         raise Exception
@@ -155,10 +168,14 @@ def generate_dataset(input_info: ndarray, input_close: ndarray, input_mask: ndar
     if len(x) != len(y):
         raise Exception
 
+    if enable_window_nomalization:
+        x = _window_nomalization(x, threshold_scale=0.005)
+
     length = _make_divisible(len(x), batch_size)
     x, y = x[-length:], y[-length:]
 
-    length_train = _make_divisible(length * split_ratio, batch_size)
+    # length_train = _make_divisible(length * split_ratio, batch_size)
+    length_train = int(_make_divisible(length * split_ratio, batch_size))
 
     if train_include_test:
         x_train, y_train = x[:], y[:]

@@ -22,8 +22,9 @@
                 //"1h",
             ],
             "include_corr_pairlist": [
-                "BTC/USDT",
+                //"BTC/USDT",
                 "ETH/USDT",
+                //"XRP/USDT",
             ],
             "label_period_candles": 20,
             "include_shifted_candles": 0,

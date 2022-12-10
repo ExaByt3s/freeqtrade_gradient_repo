@@ -10,19 +10,12 @@ x_train = numpy.squeeze(x_train)
 x_test = numpy.squeeze(x_test)
 print(x_train.shape, x_test.shape)
 
-# model = lightgbm()
-# model.fit(x_train, y_train)
-#
-# print(f'accuracy_train: {model.score(x_train, y_train)}')
-# print(f'accuracy_test: {model.score(x_test, y_test)}')
-
 lightgbm_train = lightgbm.Dataset(x_train, y_train)
 lightgbm_test = lightgbm.Dataset(x_test, y_test, reference=lightgbm_train)
 
 params = {
     'objective': 'multiclass',
     'num_class': 2,
-    # 'num_leaves': 2000,
 }
 
 lightgbm_results = {}
