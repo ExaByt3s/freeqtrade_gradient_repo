@@ -21,6 +21,14 @@ from tensorflow.keras.layers import (
     Concatenate,
 )
 
+from load_data import load_data
+
+x_train, y_train, x_test, y_test = load_data()
+print(x_train.shape, x_test.shape)
+
+window = x_train.shape[1]
+feature = x_train.shape[2]
+
 from tensorflow.keras.layers import Layer
 from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization# , DenseInputBias, DenseAverage
 
@@ -96,7 +104,7 @@ def define_model():
     model = CustomModel()  # inputs=inputs, outputs=x
     '''
 
-    inputs = Input(shape=(2000, 1))
+    inputs = Input(shape=(window, feature))
 
     '''
     x = Flatten()(inputs)
@@ -232,11 +240,6 @@ else:
 print(f'device: {tf.config.list_logical_devices()}')
 
 from tensorflow.keras.optimizers import Adam
-
-from load_data import load_data
-
-x_train, y_train, x_test, y_test = load_data()
-print(x_train.shape, x_test.shape)
 
 with strategy_scope:
     # data_train = strategy.experimental_distribute_dataset(data_train)
