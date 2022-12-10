@@ -5,12 +5,14 @@ from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.resolvers import StrategyResolver
 import generate_dataset
 
-def column_feature(dataframe: DataFrame) -> list[str]:
+# def column_feature(dataframe: DataFrame) -> list[str]:
+def column_feature(dataframe: DataFrame) -> list:
     column_names = dataframe.columns
     feature = [c for c in column_names if c[0] == '%']
     return feature
 
-def column_label(dataframe: DataFrame) -> list[str]:
+# def column_label(dataframe: DataFrame) -> list[str]:
+def column_label(dataframe: DataFrame) -> list:
     column_names = dataframe.columns
     label = [c for c in column_names if c[0] == '&']
     return label
@@ -38,9 +40,10 @@ def load_data(return_column_feature: bool = False):  # timerange: str
 
     x_train, y_train, x_test, y_test = (
         generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
-                                          (volume > 0).to_numpy(dtype='bool'), window=2000,
-                                          threshold=0.01, batch_size=64, split_ratio=0.8, train_include_test=False,
-                                          enable_window_nomalization=True)
+        # generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float'), close.to_numpy(dtype='float'),
+                                          (volume > 0).to_numpy(dtype='bool'), window=1,
+                                          threshold=0.01, batch_size=200, split_ratio=0.8, train_include_test=False,
+                                          enable_window_nomalization=False)
     )
 
     if len(x_train) == 0 or len(x_test) == 0:

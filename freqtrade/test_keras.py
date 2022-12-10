@@ -135,10 +135,10 @@ def define_model():
 
     x = Flatten()(inputs)
     x = Dense(1024)(x)
-    # x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(1024)(x)
-    # x = BatchNormalization()(x)
+    x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
     x = Activation('softmax')(x)
@@ -218,7 +218,8 @@ def define_model():
 
     return model
 
-if 'POPLAR_SDK_ENABLED' in os.environ:
+# if 'POPLAR_SDK_ENABLED' in os.environ:
+if False:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
     ipu_config.auto_select_ipus = 1
@@ -252,7 +253,8 @@ with strategy_scope:
         model = define_model()
 
     early_stopping = EarlyStopping(monitor='loss', patience=10)
-    model.compile(optimizer=Adam(learning_rate=1e-6), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
+    # model.compile(optimizer=Adam(learning_rate=1e-6), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
+    model.compile(optimizer=Adam(), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
     model.summary()
 
     while True:
@@ -271,5 +273,5 @@ with strategy_scope:
 
         except KeyboardInterrupt:
             print(f'\nPaused: KeyboardInterrupt')
-            model.save('./model')
+            # model.save('./model')
             break

@@ -168,8 +168,8 @@ def generate_dataset(input_info: ndarray, input_close: ndarray, input_mask: ndar
     if len(x) != len(y):
         raise Exception
 
-    if enable_window_nomalization:
-        x = _window_nomalization(x, threshold_scale=0.005)
+    # if enable_window_nomalization:
+        # x = _window_nomalization(x, threshold_scale=0.005)
 
     length = _make_divisible(len(x), batch_size)
     x, y = x[-length:], y[-length:]

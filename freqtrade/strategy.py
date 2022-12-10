@@ -236,10 +236,9 @@ class Strategy(IStrategy):
             informative = self.dp.get_pair_dataframe(pair, timeframe)
 
         for t in self.freqai_info['feature_parameters']['indicator_periods_candles']:
-            # print(informative)
             t = int(t)
-            informative[f'%{coin}-MFI-{t}'] = ta.MFI(informative, timeperiod=t) / 100
-            informative[f'%{coin}-ADX-{t}'] = ta.ADX(informative, timeperiod=t) / 100
+            # informative[f'%{coin}-MFI-{t}'] = ta.MFI(informative, timeperiod=t) / 100
+            # informative[f'%{coin}-ADX-{t}'] = ta.ADX(informative, timeperiod=t) / 100
 
             # bollinger = qtpylib.bollinger_bands(
                 # qtpylib.typical_price(informative), window=t, stds=2.2
@@ -264,29 +263,29 @@ class Strategy(IStrategy):
                 (informative['open'] + informative['high'] + informative['low'] + informative['close']) / 4
             )
 
-            informative[f'%{coin}-RSI-{t}'] = ta.RSI(informative[f'{coin}-heikin_ashi-close'], timeperiod=t) / 100
-            informative[f'%{coin}-RCI-{t}'] = rci(informative[f'{coin}-heikin_ashi-close'].to_numpy(), timeperiod=t) / 100
+            # informative[f'%{coin}-RSI-{t}'] = ta.RSI(informative[f'{coin}-heikin_ashi-close'], timeperiod=t) / 100
+            # informative[f'%{coin}-RCI-{t}'] = rci(informative[f'{coin}-heikin_ashi-close'].to_numpy(), timeperiod=t) / 100
 
-            informative[f'{coin}-RSI-{t}'] = ta.RSI(informative[f'{coin}-heikin_ashi-close'], timeperiod=t) / 100
-            informative[f'%{coin}-EMA(RSI)-{t}'] = ta.EMA(informative[f'{coin}-RSI-{t}'], timeperiod=t)
-            informative[f'%{coin}-WMA(RSI)-{t}'] = ta.WMA(informative[f'{coin}-RSI-{t}'], timeperiod=t)
-            informative[f'%{coin}-HMA(RSI)-{t}'] = qtpylib.hma(informative[f'{coin}-RSI-{t}'], window=t)
-            informative[f'%{coin}-Regression_1(RSI)-{t}'] = (
-                indicator.regression_1(informative[f'{coin}-RSI-{t}'].to_numpy(), window=t)
-            )
+            # informative[f'{coin}-RSI-{t}'] = ta.RSI(informative[f'{coin}-heikin_ashi-close'], timeperiod=t) / 100
+            # informative[f'%{coin}-EMA(RSI)-{t}'] = ta.EMA(informative[f'{coin}-RSI-{t}'], timeperiod=t)
+            # informative[f'%{coin}-WMA(RSI)-{t}'] = ta.WMA(informative[f'{coin}-RSI-{t}'], timeperiod=t)
+            # informative[f'%{coin}-HMA(RSI)-{t}'] = qtpylib.hma(informative[f'{coin}-RSI-{t}'], window=t)
+            # informative[f'%{coin}-Regression_1(RSI)-{t}'] = (
+                # indicator.regression_1(informative[f'{coin}-RSI-{t}'].to_numpy(), window=t)
+            # )
             # informative[f'%{coin}-moving_average_simple(RSI)-{t}'] = (
                 # indicator.moving_average_simple(informative[f'{coin}-RSI-{t}'].to_numpy(), window=t)
             # )
 
-            # informative[f'{coin}-Group1-moving_average_simple-{t}'] = (
-                # indicator.moving_average_simple(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
-            # )
-            # informative[f'{coin}-Group1-Regression_1-{t}'] = (
-                # indicator.regression_1(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
-            # )
-            # informative[f'{coin}-Group1-EMA-{t}'] = ta.EMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
-            # informative[f'{coin}-Group1-WMA-{t}'] = ta.WMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
-            # informative[f'{coin}-Group1-HMA-{t}'] = qtpylib.hma(informative[f'{coin}-heikin_ashi-close'], window=t)
+            informative[f'{coin}-Group1-moving_average_simple-{t}'] = (
+                indicator.moving_average_simple(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
+            )
+            informative[f'{coin}-Group1-Regression_1-{t}'] = (
+                indicator.regression_1(informative[f'{coin}-heikin_ashi-close'].to_numpy(), window=t)
+            )
+            informative[f'{coin}-Group1-EMA-{t}'] = ta.EMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
+            informative[f'{coin}-Group1-WMA-{t}'] = ta.WMA(informative[f'{coin}-heikin_ashi-close'], timeperiod=t)
+            informative[f'{coin}-Group1-HMA-{t}'] = qtpylib.hma(informative[f'{coin}-heikin_ashi-close'], window=t)
 
             # bollinger = qtpylib.bollinger_bands(informative[f'{coin}-heikin_ashi-close'], window=t, stds=2.2)
             # informative[f'{coin}-Group1-BB_lower-{t}'] = bollinger['lower']
@@ -314,10 +313,10 @@ class Strategy(IStrategy):
         dataframe = dataframe.drop(columns=skip_columns)
 
         if set_generalized_indicators:
-            # dataframe['%day_of_week'] = (dataframe['date'].dt.dayofweek + 1) / 7
-            # dataframe['%hour_of_day'] = (dataframe['date'].dt.hour + 1) / 24
+            dataframe['%day_of_week'] = (dataframe['date'].dt.dayofweek + 1) / 7
+            dataframe['%hour_of_day'] = (dataframe['date'].dt.hour + 1) / 24
             # dataframe['%minute_of_hour'] = (dataframe['date'].dt.minute + 1) / 60
-            dataframe['&prediction'] = 0
+            dataframe['&prediction'] = 0.
 
         return dataframe
 
