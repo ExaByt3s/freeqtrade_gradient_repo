@@ -12,3 +12,5 @@ export OLDPYTHONPATH="${PYTHONPATH}"
 export PYTHONPATH="${OLDPYTHONPATH}"
 export PYTHONPATH="/usr/local/lib/python3.8/dist-packages:${PYTHONPATH}"
 export PYTHONPATH="/notebooks/freqtrade/freqtrade/.env/lib/python3.8/site-packages:${PYTHONPATH}"
+
+export COLORTERM=truecolor
