@@ -1,10 +1,11 @@
 {
-    "strategy": "Strategy",
+    //"strategy": "Strategy",
+    "strategy": "Strategy2",
     "timeframe": "5m",
     "max_open_trades": 5,
-    "freqaimodel": "CNNPredictionModel2",
+    //"freqaimodel": "CNNPredictionModel2",
     "freqai": {
-        "enabled": true,
+        "enabled": false,
         "train_period_days": 20,
         "backtest_period_days": 0.125,
         "identifier": "unique-id",
