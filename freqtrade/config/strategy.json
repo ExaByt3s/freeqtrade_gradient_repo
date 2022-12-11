@@ -1,11 +1,14 @@
 {
     //"strategy": "Strategy",
-    "strategy": "Strategy2",
+    //"strategy": "Strategy2",
+    "strategy": "FreqaiExampleStrategyRL",
     "timeframe": "5m",
     "max_open_trades": 5,
+    "fee": 0.0015,
     //"freqaimodel": "CNNPredictionModel2",
+    "freqaimodel": "ReinforcementLearner",
     "freqai": {
-        "enabled": false,
+        "enabled": true,
         "train_period_days": 20,
         "backtest_period_days": 0.125,
         "identifier": "unique-id",
@@ -35,11 +38,24 @@
             ],
         },
         "model_training_parameters": {
-            "n_estimators": 100,
+            // "n_estimators": 100,
         },
         "data_split_parameters": {
             "test_size": 0.33,
             "random_state": 1,
+        },
+        "rl_config": {
+            "train_cycles": 25,
+            "add_state_info": false,
+            "max_trade_duration_candles": 300,
+            "max_training_drawdown_pct": 0.02,
+            "cpu_count": 240,
+            "model_type": "PPO",
+            "policy_type": "MlpPolicy",
+            "model_reward_parameters": {
+                "rr": 1,
+                "profit_aim": 0.025,
+            },
         },
     },
 }
