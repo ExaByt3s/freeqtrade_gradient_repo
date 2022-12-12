@@ -2,7 +2,6 @@ import os
 import time
 import numpy as np
 import tensorflow
-import tensorflow as tf
 import tensorflow.keras as keras
 
 num_classes = 10
