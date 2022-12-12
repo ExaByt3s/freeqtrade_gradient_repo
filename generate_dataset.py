@@ -131,6 +131,16 @@ def _window_nomalization(input_a: ndarray, threshold_scale: float = 0.005) -> nd
     result = (input_a - window_minimum) / (window_maximum - window_minimum)
     return result
 
+# @jit(inline='always')
+def _window_nomalization_v2(input_a: ndarray) -> ndarray:
+
+    if len(input_a.shape) != 3:
+        raise Exception
+
+    window_index0 = numpy.repeat(input_a[:, 0], input_a.shape[1], axis=0).reshape(input_a.shape)
+    result = input_a / window_index0 - 1
+    return result
+
 # @jit()
 def generate_dataset(input_info: ndarray, input_close: ndarray, input_mask: ndarray, window: int = 200,
                      threshold: float = 0.04, batch_size: int = 200, split_ratio: float = 0.8, train_include_test: bool = False,
@@ -168,8 +178,9 @@ def generate_dataset(input_info: ndarray, input_close: ndarray, input_mask: ndar
     if len(x) != len(y):
         raise Exception
 
-    # if enable_window_nomalization:
+    if enable_window_nomalization:
         # x = _window_nomalization(x, threshold_scale=0.005)
+        x = _window_nomalization_v2(x)
 
     length = _make_divisible(len(x), batch_size)
     x, y = x[-length:], y[-length:]

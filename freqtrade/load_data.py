@@ -5,22 +5,19 @@ from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
 from freqtrade.resolvers import StrategyResolver
 import generate_dataset
 
-# def column_feature(dataframe: DataFrame) -> list[str]:
-def column_feature(dataframe: DataFrame) -> list:
+def column_feature(dataframe: DataFrame) -> list:  # list[str]
     column_names = dataframe.columns
     feature = [c for c in column_names if c[0] == '%']
     return feature
 
-# def column_label(dataframe: DataFrame) -> list[str]:
-def column_label(dataframe: DataFrame) -> list:
+def column_label(dataframe: DataFrame) -> list:  # list[str]
     column_names = dataframe.columns
     label = [c for c in column_names if c[0] == '&']
     return label
 
-def load_data(return_column_feature: bool = False):  # timerange: str
+def load_data(pair: str = 'ETH/USDT', timerange: str = '20210601-20220101', return_column_feature: bool = False):
     config = Configuration.from_files(['./config.json'])
-    config['timerange'] = '20210601-20220101'
-    pair = 'ETH/USDT'
+    config['timerange'] = timerange
 
     strategy = StrategyResolver.load_strategy(config=config)
     strategy.freqai_info = config['freqai']
@@ -40,10 +37,9 @@ def load_data(return_column_feature: bool = False):  # timerange: str
 
     x_train, y_train, x_test, y_test = (
         generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
-        # generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float'), close.to_numpy(dtype='float'),
-                                          (volume > 0).to_numpy(dtype='bool'), window=1,
-                                          threshold=0.01, batch_size=200, split_ratio=0.8, train_include_test=False,
-                                          enable_window_nomalization=False)
+                                          (volume > 0).to_numpy(dtype='bool'), window=200,
+                                          threshold=0.04, batch_size=200, split_ratio=0.8, train_include_test=False,
+                                          enable_window_nomalization=True)
     )
 
     if len(x_train) == 0 or len(x_test) == 0:

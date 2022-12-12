@@ -25,6 +25,7 @@ from load_data import load_data
 
 x_train, y_train, x_test, y_test = load_data()
 print(x_train.shape, x_test.shape)
+print(x_train)
 
 window = x_train.shape[1]
 feature = x_train.shape[2]
@@ -134,10 +135,16 @@ def define_model():
     '''
 
     x = Flatten()(inputs)
-    x = Dense(1024)(x)
+    x = Dense(2024)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(1024)(x)
+    x = Dense(2024)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(2024)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(2024)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(2)(x)
@@ -218,31 +225,10 @@ def define_model():
 
     return model
 
-# if 'POPLAR_SDK_ENABLED' in os.environ:
-if False:
-    from tensorflow.python import ipu
-    ipu_config = ipu.config.IPUConfig()
-    ipu_config.auto_select_ipus = 1
-    ipu_config.configure_ipu_system()
-    strategy = ipu.ipu_strategy.IPUStrategy()
-    strategy_scope = strategy.scope()
-else:
-    gpu = tf.config.list_logical_devices('GPU')
-    if len(gpu) > 1:
-        strategy = tf.distribute.MirroredStrategy(gpu)
-        strategy_scope = strategy.scope()
-    elif len(gpu) == 1:
-        strategy_scope = tf.device('GPU')
-    elif len(gpu) == 0:
-        # from contextlib import nullcontext
-        # strategy_scope = nullcontext()
-        strategy_scope = tf.device('CPU')
-
-print(f'device: {tf.config.list_logical_devices()}')
-
+from keras_device import scope
 from tensorflow.keras.optimizers import Adam
 
-with strategy_scope:
+with scope():
     # data_train = strategy.experimental_distribute_dataset(data_train)
     # data_test = strategy.experimental_distribute_dataset(data_test)
 

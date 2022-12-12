@@ -47,28 +47,24 @@ class FreqaiExampleStrategyRL(IStrategy):
         if informative is None:
             informative = self.dp.get_pair_dataframe(pair, tf)
 
-        # first loop is automatically duplicating indicators for time periods
-        for t in self.freqai_info["feature_parameters"]["indicator_periods_candles"]:
+        # for t in self.freqai_info["feature_parameters"]["indicator_periods_candles"]:
+            # t = int(t)
+            # informative[f"%-{pair}rsi-period_{t}"] = ta.RSI(informative, timeperiod=t)
+            # informative[f"%-{pair}mfi-period_{t}"] = ta.MFI(informative, timeperiod=t)
+            # informative[f"%-{pair}adx-period_{t}"] = ta.ADX(informative, window=t)
 
-            t = int(t)
-            informative[f"%-{pair}rsi-period_{t}"] = ta.RSI(informative, timeperiod=t)
-            informative[f"%-{pair}mfi-period_{t}"] = ta.MFI(informative, timeperiod=t)
-            informative[f"%-{pair}adx-period_{t}"] = ta.ADX(informative, window=t)
-
-        # The following raw price values are necessary for RL models
         informative[f"%-{pair}raw_close"] = informative["close"]
         informative[f"%-{pair}raw_open"] = informative["open"]
         informative[f"%-{pair}raw_high"] = informative["high"]
         informative[f"%-{pair}raw_low"] = informative["low"]
 
         indicators = [col for col in informative if col.startswith("%")]
-        # This loop duplicates and shifts all indicators to add a sense of recency to data
-        for n in range(self.freqai_info["feature_parameters"]["include_shifted_candles"] + 1):
-            if n == 0:
-                continue
-            informative_shift = informative[indicators].shift(n)
-            informative_shift = informative_shift.add_suffix("_shift-" + str(n))
-            informative = pd.concat((informative, informative_shift), axis=1)
+        # for n in range(self.freqai_info["feature_parameters"]["include_shifted_candles"] + 1):
+            # if n == 0:
+                # continue
+            # informative_shift = informative[indicators].shift(n)
+            # informative_shift = informative_shift.add_suffix("_shift-" + str(n))
+            # informative = pd.concat((informative, informative_shift), axis=1)
 
         df = merge_informative_pair(df, informative, self.config["timeframe"], tf, ffill=True)
         skip_columns = [
