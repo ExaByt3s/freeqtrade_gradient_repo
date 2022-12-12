@@ -1,5 +1,7 @@
 import os
+import time
 import numpy as np
+import tensorflow
 import tensorflow as tf
 import tensorflow.keras as keras
 
@@ -47,23 +49,26 @@ test_data_len = x_test.shape[0]
 test_data_len = make_divisible(test_data_len, batch_size)
 x_test, y_test = x_test[:test_data_len], y_test[:test_data_len]
 
+scope_all = []
+scope_all.append(tensorflow.device('CPU'))
+
 if 'POPLAR_SDK_ENABLED' in os.environ:
     from tensorflow.python import ipu
     ipu_config = ipu.config.IPUConfig()
     ipu_config.auto_select_ipus = 1
     ipu_config.configure_ipu_system()
     strategy = ipu.ipu_strategy.IPUStrategy()
-else:
-    gpu = tf.config.list_logical_devices('GPU')
-    strategy = tf.distribute.MirroredStrategy(gpu)
+    scope_all.append(strategy.scope())
 
-print(f'device: {tf.config.list_logical_devices()}')
+for scope in scope_all:
+    print(scope)
+    time_begin = time.perf_counter()
 
-if True:
-    tf.debugging.set_log_device_placement(True)
+    with scope:
+        model = keras.Model(*model_fn())
+        model.compile('sgd', 'categorical_crossentropy', metrics=['accuracy'])
+        model.summary()
+        model.fit(x_train, y_train, epochs=3, batch_size=batch_size, validation_data=(x_test, y_test))
 
-with strategy.scope():
-    model = keras.Model(*model_fn())
-    model.compile('sgd', 'categorical_crossentropy', metrics=['accuracy'])
-    model.summary()
-    model.fit(x_train, y_train, epochs=3, batch_size=batch_size, validation_data=(x_test, y_test))
+    time_end = time.perf_counter()
+    print(f'{time_end - time_begin:0.4f} (second)')

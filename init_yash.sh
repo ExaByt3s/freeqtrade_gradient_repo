@@ -13,4 +13,5 @@ export PYTHONPATH="${OLDPYTHONPATH}"
 export PYTHONPATH="/usr/local/lib/python3.8/dist-packages:${PYTHONPATH}"
 export PYTHONPATH="/notebooks/freqtrade/freqtrade/.env/lib/python3.8/site-packages:${PYTHONPATH}"
 
-export COLORTERM=truecolor
+export COLORTERM='truecolor'
+export XDG_CONFIG_HOME='/notebooks/setting'
