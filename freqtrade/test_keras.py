@@ -21,14 +21,76 @@ from tensorflow.keras.layers import (
     Concatenate,
 )
 
+
+import tensorflow
+import tensorflow.experimental.numpy as tnp
+
+tnp.experimental_enable_numpy_behavior()
+jit = tensorflow.function(jit_compile=True)
+
+@jit
+def loss_custom(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    batch_size = y_pred.shape[0]
+    y_true = tensorflow.cast(y_true, y_pred.dtype)
+
+    if y_pred.shape != (batch_size, 3):
+        raise Exception(y_pred.shape)
+    if y_true.shape != (batch_size, 2):
+        raise Exception(y_true.shape)
+
+    y_pred_index_maximum = tnp.argmax(y_pred, axis=1)
+    y_true_index_maximum = tnp.argmax(y_true, axis=1)
+
+    y_pred = y_pred[:, :2]
+    mask = tnp.repeat((y_pred_index_maximum == y_true_index_maximum), 2).reshape(batch_size, 2)
+
+    point_plus = y_pred[mask & (y_true == 1)]
+    point_minus = -y_pred[mask & (y_true == 0)]
+
+    loss = batch_size - (tnp.sum(point_plus) + tnp.sum(point_minus))
+    return loss
+
+print(loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
+assert loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])) == 2.7
+
+def reverse_direction(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    batch_size = y_pred.shape[0]
+    y_true = tensorflow.cast(y_true, y_pred.dtype)
+
+    if y_pred.shape != (batch_size, 3):
+        raise Exception(y_pred.shape)
+    if y_true.shape != (batch_size, 2):
+        raise Exception(y_true.shape)
+
+    y_pred_index_maximum = tnp.argmax(y_pred, axis=1)
+    y_true_index_maximum = tnp.argmax(y_true, axis=1)
+
+    # mask0 = (y_true_index_maximum == y_pred_index_maximum) & (y_true_index_maximum == 0)
+    # ratio0 = tnp.count_nonzero(mask0) / len(y_true_index_maximum)
+    mask0 = (y_true_index_maximum != y_pred_index_maximum) & (y_pred_index_maximum != 2)
+    ratio0 = tnp.count_nonzero(mask0) / len(y_true_index_maximum)
+    return ratio0
+
+print(reverse_direction(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
+# sys.exit()
+
+
 from load_data import load_data
 
 x_train, y_train, x_test, y_test = load_data()
 print(x_train.shape, x_test.shape)
 print(x_train)
 
+y_train = tensorflow.keras.utils.to_categorical(y_train)
+y_test = tensorflow.keras.utils.to_categorical(y_test)
+
+print(y_train.shape, y_test.shape)
+print(y_train)
+
 window = x_train.shape[1]
 feature = x_train.shape[2]
+# output_class = y_train.shape[1]
+output_class = y_train.shape[1] + 1
 
 from tensorflow.keras.layers import Layer
 from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization# , DenseInputBias, DenseAverage
@@ -135,19 +197,13 @@ def define_model():
     '''
 
     x = Flatten()(inputs)
-    x = Dense(2024)(x)
+    x = Dense(128)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(2024)(x)
+    x = Dense(32)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(2024)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(2024)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(2)(x)
+    x = Dense(output_class)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
 
@@ -239,8 +295,7 @@ with scope():
         model = define_model()
 
     early_stopping = EarlyStopping(monitor='loss', patience=10)
-    # model.compile(optimizer=Adam(learning_rate=1e-6), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
-    model.compile(optimizer=Adam(), loss='mse', metrics=['accuracy'])  # sparse_categorical_crossentropy sgd categorical_crossentropy
+    model.compile(optimizer=Adam(), loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
     model.summary()
 
     while True:
@@ -248,14 +303,6 @@ with scope():
             history = model.fit(x_train, y_train, batch_size=200, epochs=300, validation_data=(x_test, y_test),
             # history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
-                                # callbacks=[early_stopping], steps_per_epoch=x_train.shape[0] // batch_size, validation_steps=x_test.shape[0] // batch_size)
-
-            # y_predict_probability = model.predict(x_test)
-            # y_predict = np.argmax(y_predict_probability, axis=1)
-            # # print(len(y_test), len(y_predict))
-            # print(f'accuracy: {(np.count_nonzero(y_test == y_predict)) / len(y_predict) * 100:0.4f}(%)')
-            # for i in [0, 1, 2]:
-                # print(f'accuracy: {i}: {np.count_nonzero((y_test == y_predict) & (y_predict == i)) / len(y_predict) * 100:0.4f}(%)')
 
         except KeyboardInterrupt:
             print(f'\nPaused: KeyboardInterrupt')

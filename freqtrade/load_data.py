@@ -15,7 +15,7 @@ def column_label(dataframe: DataFrame) -> list:  # list[str]
     label = [c for c in column_names if c[0] == '&']
     return label
 
-def load_data(pair: str = 'ETH/USDT', timerange: str = '20210601-20220101', return_column_feature: bool = False):
+def load_data(pair: str = 'ETH/USDT', timerange: str = '20210601-20220601', return_column_feature: bool = False):
     config = Configuration.from_files(['./config.json'])
     config['timerange'] = timerange
 

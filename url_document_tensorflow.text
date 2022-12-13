@@ -1,4 +1,5 @@
 https://www.tensorflow.org/api_docs/python/tf/boolean_mask
+https://www.tensorflow.org/api_docs/python/tf/cast
 https://www.tensorflow.org/api_docs/python/tf/config/list_logical_devices
 https://www.tensorflow.org/api_docs/python/tf/config/list_physical_devices
 https://www.tensorflow.org/api_docs/python/tf/data/experimental/AutoShardPolicy
