@@ -28,7 +28,7 @@ import tensorflow.experimental.numpy as tnp
 tnp.experimental_enable_numpy_behavior()
 jit = tensorflow.function(jit_compile=True)
 
-@jit
+# @jit
 def loss_custom(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
     batch_size = y_pred.shape[0]
     y_true = tensorflow.cast(y_true, y_pred.dtype)
@@ -42,16 +42,20 @@ def loss_custom(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorf
     y_true_index_maximum = tnp.argmax(y_true, axis=1)
 
     y_pred = y_pred[:, :2]
-    mask = tnp.repeat((y_pred_index_maximum == y_true_index_maximum), 2).reshape(batch_size, 2)
+    # mask = tnp.repeat((y_pred_index_maximum == y_true_index_maximum), 2).reshape(batch_size, 2)
+    mask = tnp.repeat((y_pred_index_maximum != 2), 2).reshape(batch_size, 2)
+    # mask = tnp.repeat((y_true_index_maximum != y_pred_index_maximum) & (y_pred_index_maximum != 2), 2).reshape(batch_size, 2)
 
     point_plus = y_pred[mask & (y_true == 1)]
     point_minus = -y_pred[mask & (y_true == 0)]
+    # print(point_plus)
+    # print(point_minus)
 
     loss = batch_size - (tnp.sum(point_plus) + tnp.sum(point_minus))
     return loss
 
 print(loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
-assert loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])) == 2.7
+assert loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])) == 3.2
 
 def reverse_direction(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
     batch_size = y_pred.shape[0]
@@ -77,7 +81,9 @@ print(reverse_direction(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.
 
 from load_data import load_data
 
-x_train, y_train, x_test, y_test = load_data()
+x_train, y_train, x_test, y_test, column_feature = load_data(window=1, return_column_feature=True)
+print(column_feature)
+
 print(x_train.shape, x_test.shape)
 print(x_train)
 
@@ -89,8 +95,8 @@ print(y_train)
 
 window = x_train.shape[1]
 feature = x_train.shape[2]
-# output_class = y_train.shape[1]
-output_class = y_train.shape[1] + 1
+output_class = y_train.shape[1]
+# output_class = y_train.shape[1] + 1
 
 from tensorflow.keras.layers import Layer
 from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization# , DenseInputBias, DenseAverage
@@ -200,7 +206,7 @@ def define_model():
     x = Dense(128)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = Dense(32)(x)
+    x = Dense(128)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = Dense(output_class)(x)
@@ -295,7 +301,9 @@ with scope():
         model = define_model()
 
     early_stopping = EarlyStopping(monitor='loss', patience=10)
-    model.compile(optimizer=Adam(), loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
+    # model.compile(optimizer=Adam(), loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
+    # model.compile(optimizer='sgd', loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
+    model.compile(optimizer='sgd', loss='mean_squared_error', metrics=['accuracy'])  # learning_rate=1e-6 steps_per_execution=len(x_test) // 200
     model.summary()
 
     while True:

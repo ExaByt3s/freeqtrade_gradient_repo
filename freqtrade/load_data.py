@@ -15,7 +15,7 @@ def column_label(dataframe: DataFrame) -> list:  # list[str]
     label = [c for c in column_names if c[0] == '&']
     return label
 
-def load_data(pair: str = 'ETH/USDT', timerange: str = '20210601-20220601', return_column_feature: bool = False):
+def load_data(pair: str = 'ETH/USDT', timerange: str = '20200701-20220701', window: int = 1, return_column_feature: bool = False):
     config = Configuration.from_files(['./config.json'])
     config['timerange'] = timerange
 
@@ -37,9 +37,9 @@ def load_data(pair: str = 'ETH/USDT', timerange: str = '20210601-20220601', retu
 
     x_train, y_train, x_test, y_test = (
         generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
-                                          (volume > 0).to_numpy(dtype='bool'), window=200,
+                                          (volume > 0).to_numpy(dtype='bool'), window=window,
                                           threshold=0.04, batch_size=200, split_ratio=0.8, train_include_test=False,
-                                          enable_window_nomalization=True)
+                                          enable_window_nomalization=False)
     )
 
     if len(x_train) == 0 or len(x_test) == 0:
