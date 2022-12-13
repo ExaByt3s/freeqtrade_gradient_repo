@@ -1,10 +1,4 @@
-import os
 import sys
-import numpy as np
-import tensorflow as tf
-from numpy import ndarray
-from pandas import DataFrame
-from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.models import Model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
@@ -15,7 +9,6 @@ from tensorflow.keras.layers import (
     Dropout,
     Flatten,
     MaxPooling1D,
-    UpSampling1D,
     GRU,
     Input,
     Concatenate,
@@ -81,7 +74,7 @@ print(reverse_direction(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.
 
 from load_data import load_data
 
-x_train, y_train, x_test, y_test, column_feature = load_data(window=1, return_column_feature=True)
+x_train, y_train, x_test, y_test, column_feature = load_data(window=200, return_column_feature=True)
 print(column_feature)
 
 print(x_train.shape, x_test.shape)
@@ -99,7 +92,8 @@ output_class = y_train.shape[1]
 # output_class = y_train.shape[1] + 1
 
 from tensorflow.keras.layers import Layer
-from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization# , DenseInputBias, DenseAverage
+# DenseInputBias DenseAverage
+from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization
 
 class DenseBlock(Layer):
     def __init__(self):
@@ -144,7 +138,7 @@ class DenseBlockSkip(Layer):
 
 def define_model():
     '''
-    class CustomModel(tf.keras.Model):
+    class CustomModel(tensorflow.keras.Model):
         def __init__(self):
             super(CustomModel, self).__init__()
             self.layer_1 = Conv1D(16, kernel_size=200)
@@ -202,6 +196,7 @@ def define_model():
     model = Model(inputs=inputs, outputs=x)
     '''
 
+    '''
     x = Flatten()(inputs)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
@@ -211,6 +206,24 @@ def define_model():
     x = Activation('relu')(x)
     x = Dense(output_class)(x)
     x = Activation('softmax')(x)
+    model = Model(inputs=inputs, outputs=x)
+    '''
+
+    x = tensorflow.keras.layers.Conv1D(32, kernel_size=3)(inputs)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.MaxPooling1D(pool_size=2)(x)
+    x = tensorflow.keras.layers.Conv1D(64, kernel_size=3)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.MaxPooling1D(pool_size=2)(x)
+    x = tensorflow.keras.layers.Conv1D(128, kernel_size=3)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.MaxPooling1D(pool_size=2)(x)
+    x = tensorflow.keras.layers.Flatten()(x)
+    x = tensorflow.keras.layers.Dense(16)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
 
     '''
@@ -272,7 +285,7 @@ def define_model():
     '''
 
     '''
-    model = tf.keras.models.Sequential([
+    model = tensorflow.keras.models.Sequential([
         GRU(64, return_sequences=True),
         Activation('relu'),
         GRU(64, return_sequences=False),
@@ -288,31 +301,29 @@ def define_model():
     return model
 
 from keras_device import scope
-from tensorflow.keras.optimizers import Adam
 
 with scope():
     # data_train = strategy.experimental_distribute_dataset(data_train)
     # data_test = strategy.experimental_distribute_dataset(data_test)
 
     try:
-        model = tf.keras.models.load_model('./model')
+        model = tensorflow.keras.models.load_model('./model')
     except OSError as error:
         print(f'Model has not found: {error}')
         model = define_model()
 
-    early_stopping = EarlyStopping(monitor='loss', patience=10)
-    # model.compile(optimizer=Adam(), loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
-    # model.compile(optimizer='sgd', loss=loss_custom, metrics=['accuracy', reverse_direction])  # learning_rate=1e-6 mean_squared_error
-    model.compile(optimizer='sgd', loss='mean_squared_error', metrics=['accuracy'])  # learning_rate=1e-6 steps_per_execution=len(x_test) // 200
+    early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10)
+    # learning_rate=1e-6 mean_squared_error sgd reverse_direction loss_custom steps_per_execution=len(x_test) // 200
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
     model.summary()
 
     while True:
         try:
+            # data_train batch_size data_test
             history = model.fit(x_train, y_train, batch_size=200, epochs=300, validation_data=(x_test, y_test),
-            # history = model.fit(data_train, batch_size=batch_size, epochs=1, validation_data=data_test,
                                 callbacks=[early_stopping])
 
         except KeyboardInterrupt:
-            print(f'\nPaused: KeyboardInterrupt')
+            print('\nPaused: KeyboardInterrupt')
             # model.save('./model')
             break

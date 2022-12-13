@@ -23,16 +23,12 @@ model = lightgbm.train(params=params, train_set=lightgbm_train, valid_sets=[ligh
                        valid_names=['Train', 'Test'], num_boost_round=100, early_stopping_rounds=20,
                        evals_result=lightgbm_results)
 
-# print(lightgbm_results)
-# model = lgb.train(lgbm_params, lgb_train, valid_sets=lgb_eval)
-
 y_prediction_probality = model.predict(x_test, num_iteration=model.best_iteration)
 y_prediction = numpy.argmax(y_prediction_probality, axis=1)
 
 accuracy = sum(y_test == y_prediction) / len(y_test)
 print(accuracy)
 
-# print(model.feature_importance())
 importance = DataFrame({'feature': column_feature, 'importance': model.feature_importance()}
                        ).sort_values('importance', ascending=False)
 print(importance.to_markdown())
