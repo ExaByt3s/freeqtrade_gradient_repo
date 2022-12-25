@@ -1,6 +1,10 @@
 __pycache__/
+backup*
+freqtrade/cache.pickle
 freqtrade/user_data/backtest_results/
 freqtrade/user_data/models/
 freqtrade/user_data/plot/
 freqtrade/secret.sh
 freqtrade/tradesv3.dryrun.sqlite
+muzero_stochastic/tmp/
+tmp*

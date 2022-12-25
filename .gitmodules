@@ -1,6 +1,6 @@
 [submodule "muzero/ReinfoceLearningForTrading"]
 	path = muzero/ReinfoceLearningForTrading
 	url = https://github.com/sugiyama404/ReinfoceLearningForTrading
-[submodule "muzero_sequential/simple_distributed_rl"]
-	path = muzero_sequential/simple_distributed_rl
+[submodule "muzero_stochastic/simple_distributed_rl"]
+	path = muzero_stochastic/simple_distributed_rl
 	url = https://github.com/pocokhc/simple_distributed_rl

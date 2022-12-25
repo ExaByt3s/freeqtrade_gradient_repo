@@ -12,6 +12,7 @@ https://www.tensorflow.org/api_docs/python/tf/distribute/TPUStrategy
 https://www.tensorflow.org/api_docs/python/tf/gather
 https://www.tensorflow.org/api_docs/python/tf/keras/Model
 https://www.tensorflow.org/api_docs/python/tf/keras/layers/Concatenate
+https://www.tensorflow.org/api_docs/python/tf/keras/layers/GRU
 https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer
 https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/schedules/InverseTimeDecay
 https://www.tensorflow.org/api_docs/python/tf/keras/utils/timeseries_dataset_from_array
@@ -27,4 +28,5 @@ https://www.tensorflow.org/api_docs/python/tf/range
 https://www.tensorflow.org/api_docs/python/tf/tensordot
 https://www.tensorflow.org/api_docs/python/tf/where
 https://www.tensorflow.org/guide/gpu
+https://www.tensorflow.org/guide/tf_numpy
 https://www.tensorflow.org/guide/tpu

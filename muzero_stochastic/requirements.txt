@@ -1,0 +1,9 @@
+matplotlib
+pillow
+pandas
+opencv-python
+gym
+pygame
+kaggle_environments
+psutil
+pynvml

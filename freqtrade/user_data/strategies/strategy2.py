@@ -1,1 +1,0 @@
-../../strategy2.py

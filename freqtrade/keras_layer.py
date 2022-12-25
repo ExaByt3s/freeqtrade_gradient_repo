@@ -52,6 +52,21 @@ class SimpleDense(Layer):
     def call(self, inputs):
         return tf.matmul(inputs, self.w) + self.b
 
+class DenseNotTainable(Layer):
+    def __init__(self, units):
+        super(DenseNotTainable, self).__init__()
+        self.units = units
+
+    def build(self, input_shape):
+        self.w = self.add_weight(name='w', shape=(input_shape[-1], self.units),
+                                 initializer='random_normal',
+                                 trainable=False)
+        self.b = self.add_weight(name='b', shape=(self.units,),
+                                 initializer='random_normal',
+                                 trainable=False)
+    def call(self, inputs):
+        return tf.matmul(inputs, self.w) + self.b
+
 class DenseAverage(Layer):
     def __init__(self, units=32):
         super(DenseAverage, self).__init__()

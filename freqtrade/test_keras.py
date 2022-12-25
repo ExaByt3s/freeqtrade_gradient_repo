@@ -1,54 +1,62 @@
+import os
+import pickle
 import sys
-from tensorflow.keras.models import Model
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import (
-    Activation,
-    BatchNormalization,
-    Conv1D,
-    Dense,
-    Dropout,
-    Flatten,
-    MaxPooling1D,
-    GRU,
-    Input,
-    Concatenate,
-)
 
+from keras_device import scope
+from tensorflow_wrapper import tensorflow
 
-import tensorflow
-import tensorflow.experimental.numpy as tnp
-
-tnp.experimental_enable_numpy_behavior()
-jit = tensorflow.function(jit_compile=True)
-
-# @jit
+# @tensorflow.jit()
 def loss_custom(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
     batch_size = y_pred.shape[0]
     y_true = tensorflow.cast(y_true, y_pred.dtype)
+
+    # print(y_pred)
+    # print(y_true)
 
     if y_pred.shape != (batch_size, 3):
         raise Exception(y_pred.shape)
     if y_true.shape != (batch_size, 2):
         raise Exception(y_true.shape)
 
-    y_pred_index_maximum = tnp.argmax(y_pred, axis=1)
-    y_true_index_maximum = tnp.argmax(y_true, axis=1)
+    # y_pred_index_maximum = tensorflow.numpy.argmax(y_pred, axis=1)
+    # y_true_index_maximum = tensorflow.numpy.argmax(y_true, axis=1)
+
+    # print(y_pred_index_maximum)
+    # print(y_true_index_maximum)
+
+    point_zero = y_pred[:, 2:]
+
+    # print(point_zero)
 
     y_pred = y_pred[:, :2]
-    # mask = tnp.repeat((y_pred_index_maximum == y_true_index_maximum), 2).reshape(batch_size, 2)
-    mask = tnp.repeat((y_pred_index_maximum != 2), 2).reshape(batch_size, 2)
-    # mask = tnp.repeat((y_true_index_maximum != y_pred_index_maximum) & (y_pred_index_maximum != 2), 2).reshape(batch_size, 2)
 
-    point_plus = y_pred[mask & (y_true == 1)]
-    point_minus = -y_pred[mask & (y_true == 0)]
+    # print(y_pred)
+
+    y_difference = y_true - y_pred
+
+    # print(y_difference)
+
+    # mask_zero = tensorflow.numpy.repeat((y_pred_index_maximum == 2), 2).reshape(batch_size, 2)
+
+    # print(mask_zero)
+
+    # point_plus = y_pred[~mask_zero & (y_difference > 0)]
+    # point_minus = -y_pred[mask_zero | (y_difference < 0)]
+    point_plus = y_pred[y_difference > 0]
+    point_minus = y_pred[y_difference < 0]
+
     # print(point_plus)
     # print(point_minus)
 
-    loss = batch_size - (tnp.sum(point_plus) + tnp.sum(point_minus))
+    fee = 0.002
+
+    # loss = batch_size - tensorflow.numpy.sum(point_plus) + tensorflow.numpy.sum(point_minus) * 1.05
+    # loss = batch_size - tensorflow.numpy.sum(point_plus) + tensorflow.numpy.sum(point_minus) - tensorflow.numpy.sum(point_zero) * 0
+    loss = batch_size - (tensorflow.numpy.sum(point_plus) * (1 - fee)) + (tensorflow.numpy.sum(point_minus) * (1 + fee)) - tensorflow.numpy.sum(point_zero) * 0
     return loss
 
-print(loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
-assert loss_custom(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])) == 3.2
+print(loss_custom(tensorflow.numpy.array([[1, 0], [1, 0], [1, 0]]), tensorflow.numpy.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
+# assert loss_custom(tensorflow.numpy.array([[1, 0], [1, 0], [1, 0]]), tensorflow.numpy.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])) == 3.4
 
 def reverse_direction(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
     batch_size = y_pred.shape[0]
@@ -59,52 +67,177 @@ def reverse_direction(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> t
     if y_true.shape != (batch_size, 2):
         raise Exception(y_true.shape)
 
-    y_pred_index_maximum = tnp.argmax(y_pred, axis=1)
-    y_true_index_maximum = tnp.argmax(y_true, axis=1)
+    y_pred_index_maximum = tensorflow.numpy.argmax(y_pred, axis=1)
+    y_true_index_maximum = tensorflow.numpy.argmax(y_true, axis=1)
 
     # mask0 = (y_true_index_maximum == y_pred_index_maximum) & (y_true_index_maximum == 0)
-    # ratio0 = tnp.count_nonzero(mask0) / len(y_true_index_maximum)
+    # ratio0 = tensorflow.numpy.count_nonzero(mask0) / len(y_true_index_maximum)
+
     mask0 = (y_true_index_maximum != y_pred_index_maximum) & (y_pred_index_maximum != 2)
-    ratio0 = tnp.count_nonzero(mask0) / len(y_true_index_maximum)
+    ratio0 = tensorflow.numpy.count_nonzero(mask0) / len(y_true_index_maximum)
     return ratio0
 
-print(reverse_direction(tnp.array([[1, 0], [1, 0], [1, 0]]), tnp.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
-# sys.exit()
+print(reverse_direction(tensorflow.numpy.array([[1, 0], [1, 0], [1, 0]]), tensorflow.numpy.array([[0.1, 0.3, 0.6], [0.1, 0.6, 0.3], [0.6, 0.3, 0.1]])))
 
+def ratio2(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    batch_size = y_pred.shape[0]
+    y_true = tensorflow.cast(y_true, y_pred.dtype)
 
-from load_data import load_data
+    if y_pred.shape != (batch_size, 3):
+        raise Exception(y_pred.shape)
+    if y_true.shape != (batch_size, 2):
+        raise Exception(y_true.shape)
 
-x_train, y_train, x_test, y_test, column_feature = load_data(window=200, return_column_feature=True)
+    y_pred_index_maximum = tensorflow.numpy.argmax(y_pred, axis=1)
+    y_true_index_maximum = tensorflow.numpy.argmax(y_true, axis=1)
+    mask = y_pred_index_maximum == 2
+    ratio = tensorflow.numpy.count_nonzero(mask) / len(y_true_index_maximum)
+    return ratio
+
+@tensorflow.jit()
+def accuracy60(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    y_true = tensorflow.cast(y_true, y_pred.dtype)
+
+    y_pred_index_maximum = tensorflow.numpy.argmax(y_pred, axis=1)
+    y_true_index_maximum = tensorflow.numpy.argmax(y_true, axis=1)
+    y_pred_maximum = tensorflow.numpy.amax(y_pred, axis=1)
+
+    mask = (y_pred_index_maximum == y_true_index_maximum) & (y_pred_maximum > 0.60)
+    ratio = tensorflow.numpy.count_nonzero(mask) / len(y_true_index_maximum)
+    return ratio
+
+print(accuracy60(tensorflow.numpy.array([[1, 0], [1, 0], [1, 0]]), tensorflow.numpy.array([[0.1, 0.3, 0.95], [0.1, 0.95, 0.3], [0.95, 0.3, 0.1]])))
+
+@tensorflow.jit()
+def reverse_direction60(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    y_true = tensorflow.cast(y_true, y_pred.dtype)
+
+    y_pred_index_maximum = tensorflow.numpy.argmax(y_pred, axis=1)
+    y_true_index_maximum = tensorflow.numpy.argmax(y_true, axis=1)
+    y_pred_maximum = tensorflow.numpy.amax(y_pred, axis=1)
+
+    mask = (y_true_index_maximum != y_pred_index_maximum) & (y_pred_maximum > 0.60)
+    ratio = tensorflow.numpy.count_nonzero(mask) / len(y_true_index_maximum)
+    return ratio
+
+@tensorflow.jit()
+def error_absolute_maximum(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor) -> tensorflow.Tensor:
+    result = tensorflow.numpy.amax(tensorflow.numpy.absolute(y_true - y_pred))
+    return result
+
+_rate_entry = 0.04
+_rate_exit_profit = 0.02
+_rate_exit_loss = 0.001
+
+if _rate_exit_profit > _rate_entry or _rate_exit_loss > _rate_entry:
+    raise Exception
+
+if _rate_entry <= 0 or _rate_exit_profit <= 0 or _rate_exit_loss <= 0 :
+    raise Exception
+
+@tensorflow.jit()
+def ratio_entry(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry) -> tensorflow.Tensor:
+    mask = (y_pred > (1 + rate_entry)) | (y_pred < (1 - rate_entry))
+    result = tensorflow.numpy.count_nonzero(mask) / len(y_pred)
+    return result
+
+@tensorflow.jit()
+def ratio_exit_profit(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry,
+                      rate_exit_profit: float = _rate_exit_profit) -> tensorflow.Tensor:
+    mask_a = (((y_pred > (1 + rate_entry)) & (y_true > (1 + rate_exit_profit)))
+              | ((y_pred < (1 - rate_entry)) & (y_true < (1 - rate_exit_profit))))
+    mask_b = (y_pred > (1 + rate_entry)) | (y_pred < (1 - rate_entry))
+    result = tensorflow.numpy.count_nonzero(mask_a) / tensorflow.numpy.count_nonzero(mask_b)
+    result = tensorflow.numpy.nan_to_num(result)
+    return result
+
+@tensorflow.jit()
+def ratio_hold(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry,
+               rate_exit_profit: float = _rate_exit_profit, rate_exit_loss: float = _rate_exit_loss) -> tensorflow.Tensor:
+    mask_a = (((y_pred > (1 + rate_entry)) & ((1 - rate_exit_loss) < y_true) & (y_true < (1 + rate_exit_profit)))
+              | ((y_pred < (1 - rate_entry)) & ((1 + rate_exit_loss) > y_true) & (y_true > (1 - rate_exit_profit))))
+    mask_b = (y_pred > (1 + rate_entry)) | (y_pred < (1 - rate_entry))
+    result = tensorflow.numpy.count_nonzero(mask_a) / tensorflow.numpy.count_nonzero(mask_b)
+    result = tensorflow.numpy.nan_to_num(result)
+    return result
+
+@tensorflow.jit()
+def ratio_exit_loss(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry,
+                    rate_exit_loss: float = _rate_exit_loss) -> tensorflow.Tensor:
+    mask_a = (((y_pred > (1 + rate_entry)) & (y_true < (1 - rate_exit_loss)))
+              | ((y_pred < (1 - rate_entry)) & (y_true > (1 + rate_exit_loss))))
+    mask_b = (y_pred > (1 + rate_entry)) | (y_pred < (1 - rate_entry))
+    result = tensorflow.numpy.count_nonzero(mask_a) / tensorflow.numpy.count_nonzero(mask_b)
+    result = tensorflow.numpy.nan_to_num(result)
+    return result
+
+@tensorflow.jit()
+def percent(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry) -> tensorflow.Tensor:
+    mask_a = y_pred > (1 + rate_entry)
+    mask_b = y_pred < (1 - rate_entry)
+
+    sum_long = tensorflow.numpy.sum(y_true[mask_a] - 1)
+    sum_short = tensorflow.numpy.sum(-(y_true[mask_b] - 1))
+    result = (sum_long + sum_short) * 100
+    return result
+
+@tensorflow.jit()
+def percent_loss(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entry: float = _rate_entry) -> tensorflow.Tensor:
+    mask_a = (y_pred > (1 + rate_entry)) & (y_true < 1)
+    mask_b = (y_pred < (1 - rate_entry)) & (y_true > 1)
+
+    sum_long = tensorflow.numpy.sum(y_true[mask_a] - 1)
+    sum_short = tensorflow.numpy.sum(-(y_true[mask_b] - 1))
+    result = (sum_long + sum_short) * 100
+    return result
+
+enable_cache = True
+cachefile = 'cache.pickle'
+
+if enable_cache and os.path.exists(cachefile):
+    with open(cachefile, 'rb') as cachehandle:
+        print(f'Using cached result from \'{cachefile}\'')
+        result = pickle.load(cachehandle)
+else:
+    from load_data import load_data
+    result = load_data(window=200, return_column_feature=True)
+
+    if enable_cache:
+        with open(cachefile, 'wb') as cachehandle:
+            print(f'Saving result to cache \'{cachefile}\'')
+            pickle.dump(result, cachehandle)
+
+x_train, y_train, x_test, y_test, column_feature = result
+
 print(column_feature)
 
 print(x_train.shape, x_test.shape)
 print(x_train)
-
-y_train = tensorflow.keras.utils.to_categorical(y_train)
-y_test = tensorflow.keras.utils.to_categorical(y_test)
 
 print(y_train.shape, y_test.shape)
 print(y_train)
 
 window = x_train.shape[1]
 feature = x_train.shape[2]
-output_class = y_train.shape[1]
+# output_class = y_train.shape[1]
 # output_class = y_train.shape[1] + 1
+output_class = 1
 
-from tensorflow.keras.layers import Layer
 # DenseInputBias DenseAverage
-from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization
+from keras_layer import RelativePosition, relative_position, SimpleDense, DenseAverage, DenseBatchNormalization, DenseNotTainable
 
-class DenseBlock(Layer):
+class DenseBlock(tensorflow.keras.layers.Layer):
     def __init__(self):
         super(DenseBlock, self).__init__()
-        self.layer_1 = Dense(64)
-        self.layer_2 = BatchNormalization()
-        self.layer_3 = Activation('relu')
-        self.layer_4 = Dense(64)
-        self.layer_5 = BatchNormalization()
-        self.layer_6 = Activation('relu')
-        self.layer_7 = Dense(4)
+        self.layer_1 = tensorflow.keras.layers.Dense(2)
+        self.layer_2 = tensorflow.keras.layers.Activation('relu')
+        self.layer_3 = tensorflow.keras.layers.Dense(256)
+        self.layer_4 = tensorflow.keras.layers.BatchNormalization()
+        self.layer_5 = tensorflow.keras.layers.Activation('relu')
+        self.layer_6 = tensorflow.keras.layers.Dense(256)
+        self.layer_7 = tensorflow.keras.layers.BatchNormalization()
+        self.layer_8 = tensorflow.keras.layers.Activation('relu')
+        self.layer_9 = tensorflow.keras.layers.Dense(2)
 
     def call(self, inputs):
         x = self.layer_1(inputs)
@@ -114,17 +247,19 @@ class DenseBlock(Layer):
         x = self.layer_5(x)
         x = self.layer_6(x)
         x = self.layer_7(x)
+        x = self.layer_8(x)
+        x = self.layer_9(x)
         return x
 
-class DenseBlockSkip(Layer):
+class DenseBlockSkip(tensorflow.keras.layers.Layer):
     def __init__(self, n):
         super(DenseBlockSkip, self).__init__()
-        self.layer_1 = BatchNormalization()
-        self.layer_2 = Activation('relu')
-        self.layer_3 = Dense(64)
-        self.layer_4 = BatchNormalization()
-        self.layer_5 = Activation('relu')
-        self.layer_6 = Dense(n)
+        self.layer_1 = tensorflow.keras.layers.BatchNormalization()
+        self.layer_2 = tensorflow.keras.layers.Activation('relu')
+        self.layer_3 = tensorflow.keras.layers.Dense(64)
+        self.layer_4 = tensorflow.keras.layers.BatchNormalization()
+        self.layer_5 = tensorflow.keras.layers.Activation('relu')
+        self.layer_6 = tensorflow.keras.layers.Dense(n)
 
     def call(self, inputs):
         x = self.layer_1(inputs)
@@ -167,10 +302,10 @@ def define_model():
     model = CustomModel()  # inputs=inputs, outputs=x
     '''
 
-    inputs = Input(shape=(window, feature))
+    inputs = tensorflow.keras.layers.Input(shape=(window, feature))
 
     '''
-    x = Flatten()(inputs)
+    x = tensorflow.keras.layers.Flatten()(inputs)
     b1 = DenseBlock()(x)
     b2 = DenseBlock()(x)
     b3 = DenseBlock()(x)
@@ -182,33 +317,149 @@ def define_model():
     b9 = DenseBlock()(x)
     b10 = DenseBlock()(x)
     b11 = DenseBlock()(x)
-    x = Concatenate()([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11])
-    # x = RelativePosition()(x)
-    x = BatchNormalization()(x)
-    x = Dense(64)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(64)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(2)(x)
-    x = Activation('softmax')(x)
-    model = Model(inputs=inputs, outputs=x)
+    x = tensorflow.keras.layers.Concatenate()([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11])
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
     '''
-    x = Flatten()(inputs)
-    x = Dense(128)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(128)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(output_class)(x)
-    x = Activation('softmax')(x)
-    model = Model(inputs=inputs, outputs=x)
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
+    '''
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(256)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
+    '''
+
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    # x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
+    # x = tensorflow.keras.layers.BatchNormalization()(x)
+    # x = tensorflow.keras.layers.Activation('relu')(x)
+    # x = tensorflow.keras.layers.Dense(output_class * 4 ** 3)(x)
+    # x = tensorflow.keras.layers.BatchNormalization()(x)
+    # x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4 ** 2)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    # x = tensorflow.keras.layers.Activation('softmax')(x)
+
+    '''
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(128)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = DenseNotTainable(128)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
+    '''
+
+    '''
+    x = tensorflow.keras.layers.GRU(64)(inputs)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(16)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    '''
+
+    model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
+
+    '''
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(2)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(128)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(16)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    x = tensorflow.keras.layers.Activation('softmax')(x)
+    model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
+    '''
+
+    '''
     x = tensorflow.keras.layers.Conv1D(32, kernel_size=3)(inputs)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.MaxPooling1D(pool_size=2)(x)
@@ -224,7 +475,8 @@ def define_model():
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
     x = tensorflow.keras.layers.Activation('softmax')(x)
-    model = Model(inputs=inputs, outputs=x)
+    model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
+    '''
 
     '''
     x = Flatten()(inputs)
@@ -284,23 +536,7 @@ def define_model():
     model = Model(inputs=inputs, outputs=x)
     '''
 
-    '''
-    model = tensorflow.keras.models.Sequential([
-        GRU(64, return_sequences=True),
-        Activation('relu'),
-        GRU(64, return_sequences=False),
-        Activation('relu'),
-        Dense(16),
-        # BatchNormalization(),
-        Activation('relu'),
-        Dense(2),
-        Activation('softmax'),
-    ])
-    '''
-
     return model
-
-from keras_device import scope
 
 with scope():
     # data_train = strategy.experimental_distribute_dataset(data_train)
@@ -313,8 +549,10 @@ with scope():
         model = define_model()
 
     early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10)
-    # learning_rate=1e-6 mean_squared_error sgd reverse_direction loss_custom steps_per_execution=len(x_test) // 200
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+    # learning_rate=1e-6 mean_squared_error sgd loss_custom reverse_direction ratio2  steps_per_execution=len(x_test) // 200
+    # accuracy accuracy60 reverse_direction60
+    model.compile(optimizer='adam', loss='mean_absolute_error', metrics=[error_absolute_maximum, ratio_entry, ratio_exit_profit,
+                  ratio_hold, ratio_exit_loss, percent, percent_loss])
     model.summary()
 
     while True:
@@ -327,3 +565,5 @@ with scope():
             print('\nPaused: KeyboardInterrupt')
             # model.save('./model')
             break
+
+sys.exit()

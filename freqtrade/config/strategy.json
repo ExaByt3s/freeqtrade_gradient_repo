@@ -1,15 +1,15 @@
 {
-    //"strategy": "Strategy",
-    //"strategy": "Strategy2",
-    "strategy": "FreqaiExampleStrategyRL",
+    //"strategy": "StrategyZigzag",
+    "strategy": "StrategyNN",
+    //"strategy": "StrategyRL",
     "timeframe": "5m",
     "max_open_trades": 5,
     "fee": 0.0015,
-    //"freqaimodel": "CNNPredictionModel2",
-    "freqaimodel": "ReinforcementLearner",
+    "freqaimodel": "NNPredictionModel",
+    //"freqaimodel": "ReinforcementLearnerSRL",
     "freqai": {
         "enabled": true,
-        "train_period_days": 20,
+        "train_period_days": 200,
         "backtest_period_days": 0.125,
         "identifier": "unique-id",
         "live_retrain_hours": 0,
@@ -22,8 +22,9 @@
         "feature_parameters": {
             "include_timeframes": [
                 "5m",
-                //"15m",
+                "15m",
                 //"1h",
+                //"1d",
             ],
             "include_corr_pairlist": [
                 //"BTC/USDT",
@@ -33,7 +34,7 @@
             "label_period_candles": 20,
             "include_shifted_candles": 0,
             "indicator_periods_candles": [
-                100,
+                //100,
                 200,
             ],
         },

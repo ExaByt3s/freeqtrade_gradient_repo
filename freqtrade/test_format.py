@@ -4,7 +4,7 @@ import pathlib
 import operator
 
 # REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent.parent
-REPO_ROOT = pathlib.Path('./freqtrade/user_data/data2/')
+REPO_ROOT = pathlib.Path('./freqtrade/user_data/data/')
 
 def main():
     if len(sys.argv) > 1:

@@ -1,3 +1,4 @@
+import numpy
 from pandas import DataFrame
 from freqtrade.configuration import Configuration
 from freqtrade.data.dataprovider import DataProvider
@@ -33,15 +34,15 @@ def load_data(pair: str = 'ETH/USDT', timerange: str = '20210701-20220701', wind
         strategy=strategy, prediction_dataframe=dataframe, pair=pair
     )
 
-    close = dataframe['close']
-    volume = dataframe['volume']
-    dataframe_feature = dataframe[column_feature(dataframe)]
+    feature = dataframe[column_feature(dataframe)].to_numpy(dtype='float32')
+    feature_mask = (dataframe['volume'] > 0).to_numpy(dtype='bool')
+
+    label = dataframe[column_label(dataframe)].to_numpy(dtype='float32')
+    label_mask = numpy.full(len(label), True, dtype='bool')
 
     x_train, y_train, x_test, y_test = (
-        generate_dataset.generate_dataset(dataframe_feature.to_numpy(dtype='float32'), close.to_numpy(dtype='float32'),
-                                          (volume > 0).to_numpy(dtype='bool'), window=window,
-                                          threshold=0.04, batch_size=200, split_ratio=0.8, train_include_test=False,
-                                          enable_window_nomalization=True)
+        generate_dataset.generate_dataset(feature, feature_mask, label, label_mask, window=window, batch_size=200,
+                                          split_ratio=0.95, train_include_test=False, enable_window_nomalization=True)
     )
 
     if len(x_train) == 0 or len(x_test) == 0:
