@@ -55,6 +55,7 @@ def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool)) -> nd
     return result
 '''
 
+'''
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
 @numba.jit
 def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = numpy.nan) -> ndarray:
@@ -72,6 +73,7 @@ def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = nump
         result[:] = input_a
 
     return result
+'''
 
 import indicator
 

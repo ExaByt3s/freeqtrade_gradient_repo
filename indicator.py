@@ -371,7 +371,7 @@ def rci_v2(close: numpy.ndarray, timeperiod: int) -> numpy.ndarray:
 
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
 @numba.jit
-def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = numpy.nan) -> ndarray:
+def shift(input_a: ndarray, period: int, fill_value = numpy.nan) -> ndarray:  # (int|float|str|bool)
     result = numpy.empty_like(input_a)
 
     if period > 0:

@@ -5,6 +5,8 @@ alias e="${EDITOR}"
 alias edit="${EDITOR}"
 unset COLUMNS
 
+pip install -U tensorflow
+
 # . ./.venv/bin/activate
 . ./freqtrade/freqtrade/.env/bin/activate
 
@@ -15,3 +17,5 @@ export PYTHONPATH="/notebooks/freqtrade/freqtrade/.env/lib/python3.8/site-packag
 
 export COLORTERM='truecolor'
 export XDG_CONFIG_HOME='/notebooks/setting'
+
+mkdir /tmp/model

@@ -191,7 +191,7 @@ def percent_loss(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entr
     result = (sum_long + sum_short) * 100
     return result
 
-enable_cache = True
+enable_cache = False
 cachefile = 'cache.pickle'
 
 if enable_cache and os.path.exists(cachefile):
@@ -400,6 +400,7 @@ def define_model():
     x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
+    '''
     x = tensorflow.keras.layers.Flatten()(inputs)
     x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
     x = tensorflow.keras.layers.BatchNormalization()(x)
@@ -421,6 +422,7 @@ def define_model():
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
     # x = tensorflow.keras.layers.Activation('softmax')(x)
+    '''
 
     '''
     x = tensorflow.keras.layers.Flatten()(inputs)
@@ -437,7 +439,6 @@ def define_model():
     x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
-    '''
     x = tensorflow.keras.layers.GRU(64)(inputs)
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
@@ -445,7 +446,6 @@ def define_model():
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
-    '''
 
     model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
 
