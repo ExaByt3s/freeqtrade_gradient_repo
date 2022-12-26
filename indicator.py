@@ -2,10 +2,8 @@ import math
 from typing import Literal, Optional
 
 import numpy
-# import numba
 from numpy import ndarray
 
-import numba_option
 from numba_wrapper import numba
 from tensorflow_wrapper import tensorflow
 
@@ -95,7 +93,7 @@ def _generate_window(x: ndarray, window: int, x_mask: Optional[ndarray] = None) 
 
     return (y, y_mask)
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def ema(x: ndarray, window: int) -> ndarray:
     # if numpy.any(~numpy.isnan(x)):
         # raise Exception
@@ -115,7 +113,7 @@ def ema(x: ndarray, window: int) -> ndarray:
 
     return y
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def ema_window(x: ndarray, window: int) -> ndarray:
     alpha = 2 / (1 + window)
 
@@ -133,7 +131,7 @@ def ema_window(x: ndarray, window: int) -> ndarray:
 
     return y
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def zigzag_initial(input_a: ndarray, threshold_rate_up: float, threshold_rate_down: float) -> int:
     x_maximum = input_a[0]
     x_minimum = input_a[0]
@@ -167,7 +165,7 @@ def zigzag_initial(input_a: ndarray, threshold_rate_up: float, threshold_rate_do
         return 1
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def zigzag(input_a: ndarray, threshold_up: float, threshold_down: float) -> ndarray:
     result = numpy.empty(len(input_a), dtype='int64')
 
@@ -211,7 +209,7 @@ def zigzag(input_a: ndarray, threshold_up: float, threshold_down: float) -> ndar
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def zigzag4(input_a: ndarray, threshold_up: float, threshold_down: float) -> ndarray:
     result = numpy.empty(len(input_a), dtype='int64')
 
@@ -257,7 +255,7 @@ def zigzag4(input_a: ndarray, threshold_up: float, threshold_down: float) -> nda
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def moving_average_simple(x: ndarray, window: int) -> ndarray:
     result = numpy.empty(len(x), dtype='float64')
 
@@ -274,7 +272,7 @@ def moving_average_simple(x: ndarray, window: int) -> ndarray:
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def window_sum_integer(x: ndarray, window: int) -> ndarray:
     result = numpy.empty(len(x), dtype='int64')
 
@@ -294,14 +292,14 @@ def window_sum_integer(x: ndarray, window: int) -> ndarray:
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def sum_range_integer(start: int, end: int) -> ndarray:
     height = start + (end - 1)
     width = (end - 1) - start + 1
     return height * width // 2
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def window_sum_range_integer(x: ndarray, window: int) -> ndarray:
     result = numpy.empty(len(x), dtype='int64')
 
@@ -314,7 +312,7 @@ def window_sum_range_integer(x: ndarray, window: int) -> ndarray:
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def window_sum_float(x: ndarray, window: int) -> ndarray:
     result = numpy.empty(len(x), dtype='float64')
 
@@ -331,7 +329,7 @@ def window_sum_float(x: ndarray, window: int) -> ndarray:
     return result
 
 
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def regression_1(y: ndarray, window: int) -> ndarray:
     if window <= 1:
         raise Exception
@@ -347,7 +345,7 @@ def regression_1(y: ndarray, window: int) -> ndarray:
     return slope * x + intercept
 
 # https://qiita.com/tkoba2/items/e0791bea345acb744195
-@numba.njit(inline=numba_option.inline())
+@numba.jit
 def rci(close: numpy.ndarray, timeperiod: int) -> numpy.ndarray:
     rci = numpy.full_like(close, numpy.nan)
     rank_period = numpy.arange(1, timeperiod + 1)
@@ -372,7 +370,7 @@ def rci_v2(close: numpy.ndarray, timeperiod: int) -> numpy.ndarray:
     return rci
 
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
-@numba.njit()
+@numba.jit
 def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = numpy.nan) -> ndarray:
     result = numpy.empty_like(input_a)
 

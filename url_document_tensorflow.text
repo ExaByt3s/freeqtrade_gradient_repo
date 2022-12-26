@@ -9,11 +9,16 @@ https://www.tensorflow.org/api_docs/python/tf/distribute
 https://www.tensorflow.org/api_docs/python/tf/distribute/DistributedDataset
 https://www.tensorflow.org/api_docs/python/tf/distribute/Strategy
 https://www.tensorflow.org/api_docs/python/tf/distribute/TPUStrategy
+https://www.tensorflow.org/api_docs/python/tf/experimental/numpy/max
+https://www.tensorflow.org/api_docs/python/tf/experimental/numpy/min
+https://www.tensorflow.org/api_docs/python/tf/experimental/numpy/std
 https://www.tensorflow.org/api_docs/python/tf/gather
 https://www.tensorflow.org/api_docs/python/tf/keras/Model
+https://www.tensorflow.org/api_docs/python/tf/keras/callbacks/EarlyStopping
 https://www.tensorflow.org/api_docs/python/tf/keras/layers/Concatenate
 https://www.tensorflow.org/api_docs/python/tf/keras/layers/GRU
 https://www.tensorflow.org/api_docs/python/tf/keras/layers/Layer
+https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/experimental/SGD
 https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/schedules/InverseTimeDecay
 https://www.tensorflow.org/api_docs/python/tf/keras/utils/timeseries_dataset_from_array
 https://www.tensorflow.org/api_docs/python/tf/map_fn

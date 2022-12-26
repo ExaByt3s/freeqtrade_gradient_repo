@@ -53,7 +53,6 @@ class NNPredictionModel(BaseTensorFlowModel):
         dataset_train = dataset_train.batch(batch_size, drop_remainder=True)
         dataset_test = dataset_test.batch(batch_size, drop_remainder=True)
 
-        early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=3, mode='min', min_delta=0.0001)
         model = self.get_init_model(dk.pair)
 
         if model is None:
@@ -61,24 +60,19 @@ class NNPredictionModel(BaseTensorFlowModel):
 
             model = self.create_model(input_dims, n_labels)
 
-            steps_per_epoch = len(x_test) // batch_size
-            log.info(f'steps_per_epoch: {steps_per_epoch}')
-
-            learning_rate_schedule = tensorflow.keras.optimizers.schedules.InverseTimeDecay(
-                0.001, decay_steps=steps_per_epoch * 1000, decay_rate=1, staircase=False
-            )
-
             model.compile(
-                optimizer=tensorflow.optimizers.Adam(learning_rate_schedule),
+                optimizer=tensorflow.optimizers.SGD(),
                 loss='mean_absolute_error',
                 metrics=[],
             )
             model.summary()
-            max_epochs = 30
+            max_epochs = 50
 
         else:
             log.info('Updating old model')
             max_epochs = 10
+
+        early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10, mode='min', start_from_epoch=20)
 
         model.fit(dataset_train, epochs=max_epochs, shuffle=False, validation_data=dataset_test, callbacks=[early_stopping])
         return model

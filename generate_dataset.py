@@ -1,17 +1,14 @@
 import sys
 from typing import Optional
-import numba
 import numpy
 import tensorflow
 from numpy import ndarray
 from pandas import DataFrame
 
+from numba_wrapper import numba
 from tensorflow_wrapper import tensorflow
 
-def jit(**kwargs):
-    return numba.njit(cache=True, **kwargs)
-
-@jit(inline='always')
+@numba.jit(inline='always')
 def _generate_answer(price: ndarray, threshold: float = 0.01, enum_unknown: int = -1, enum_up: int = 1,
                      enum_down: int = 0) -> ndarray:
 
@@ -45,7 +42,7 @@ def _generate_answer(price: ndarray, threshold: float = 0.01, enum_unknown: int 
     return (result_answer, result_answer != -1)
 
 '''
-@numba.njit()
+@numba.jit
 def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool)) -> ndarray:
     result = numpy.empty_like(input_a)
 
@@ -59,7 +56,7 @@ def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool)) -> nd
 '''
 
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
-@numba.njit()
+@numba.jit
 def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = numpy.nan) -> ndarray:
     result = numpy.empty_like(input_a)
 
@@ -78,7 +75,7 @@ def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = nump
 
 import indicator
 
-@jit(inline='always')
+@numba.jit(inline='always')
 def _generate_answer_sma(price: ndarray, window: int = 100, period_shift: int = -100) -> ndarray:
     if period_shift >= 0:
         raise Exception
@@ -110,7 +107,7 @@ def _generate_answer_regression1(price: ndarray, window: int = 100, period_shift
     mask = ~numpy.isnan(result)
     return (result, mask)
 
-@jit(inline='always')
+@numba.jit(inline='always')
 def _generate_window(a: ndarray, mask: ndarray, window: int = 200, exclude_nan: bool = False) -> (ndarray, ndarray):
 
     if len(a) != len(mask):
@@ -160,7 +157,7 @@ def _generate_window(a: ndarray, mask: ndarray, window: int = 200, exclude_nan: 
     return (result, mask_window)
 
 '''
-@jit(inline='always')
+@numba.jit(inline='always')
 def _reduce_mask(a: ndarray, mask: ndarray) -> ndarray:
     if a.shape != mask.shape:
         raise Exception
@@ -185,7 +182,7 @@ def _reduce_mask(a: ndarray, mask: ndarray) -> ndarray:
     return result
 '''
 
-@jit(inline='always')
+@numba.jit(inline='always')
 def _make_divisible(number: int, divisor: int) -> int:
     return number - (number % divisor)
 
@@ -210,7 +207,6 @@ def _window_nomalization(input_a: ndarray, threshold_scale: Optional[float]) -> 
     result = (input_a - window_minimum) / (window_maximum - window_minimum)
     return result
 
-# @jit(inline='always')
 def _window_nomalization_v2(input_a: ndarray) -> ndarray:
 
     if len(input_a.shape) != 3:
@@ -219,6 +215,13 @@ def _window_nomalization_v2(input_a: ndarray) -> ndarray:
     window_index0 = numpy.repeat(input_a[:, 0], input_a.shape[1], axis=0).reshape(input_a.shape)
     result = input_a / window_index0 - 1
     return result
+
+
+def _window_nomalization_zscore(x: ndarray, axis: int = None):
+    x_mean = x.mean(axis=axis, keepdims=True)
+    x_std  = numpy.std(x, axis=axis, keepdims=True)
+    zscore = (x - x_mean) / x_std
+    return zscore
 
 def generate_dataset(x: ndarray, x_mask: ndarray, y: ndarray, y_mask: ndarray, window: int, batch_size: int = 200,
                      split_ratio: float = 0.8, train_include_test: bool = False, enable_window_nomalization: bool = False,

@@ -48,7 +48,7 @@ class StrategyNN(IStrategy):
         super().__init__(config=config)
         self.indent = 4
         self.window_line = 100
-        self.threshold_entry = 0.04
+        self.threshold_entry = 0.03
         self.threshold_exit_profit = 0.02
         self.threshold_exit_loss = 0.01
         self.threshold_line = 0.01
@@ -177,6 +177,9 @@ class StrategyNN(IStrategy):
             dataframe['line'] = (
                 indicator.moving_average_simple(dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy(), 100)
             )
+            # dataframe['line'] = (
+                # dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].rolling(window=100).max()
+            # )
             dataframe['&prediction_line'] = indicator.shift(dataframe['line'].to_numpy(), period=-100) / dataframe['line']
             # print(dataframe[['date', '&prediction_line']].to_markdown())
 

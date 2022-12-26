@@ -401,12 +401,18 @@ def define_model():
     '''
 
     x = tensorflow.keras.layers.Flatten()(inputs)
-    # x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
-    # x = tensorflow.keras.layers.BatchNormalization()(x)
-    # x = tensorflow.keras.layers.Activation('relu')(x)
-    # x = tensorflow.keras.layers.Dense(output_class * 4 ** 3)(x)
-    # x = tensorflow.keras.layers.BatchNormalization()(x)
-    # x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4 ** 4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * 4 ** 3)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class * 4 ** 2)(x)
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
@@ -548,13 +554,22 @@ with scope():
         print(f'Model has not found: {error}')
         model = define_model()
 
-    early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10)
-    # learning_rate=1e-6 mean_squared_error sgd loss_custom reverse_direction ratio2  steps_per_execution=len(x_test) // 200
-    # accuracy accuracy60 reverse_direction60
-    model.compile(optimizer='adam', loss='mean_absolute_error', metrics=[error_absolute_maximum, ratio_entry, ratio_exit_profit,
-                  ratio_hold, ratio_exit_loss, percent, percent_loss])
+    # steps_per_epoch = len(x_test) // batch_size
+    # log.info(f'steps_per_epoch: {steps_per_epoch}')
+
+    # learning_rate_schedule = tensorflow.keras.optimizers.schedules.InverseTimeDecay(
+        # 0.001, decay_steps=steps_per_epoch * 1000, decay_rate=1, staircase=False
+    # )
+
+    # learning_rate=1e-6 learning_rate=learning_rate_schedule
+    # accuracy accuracy60 ratio2 reverse_direction reverse_direction60
+    # loss_custom steps_per_execution=len(x_test) // 200
+    model.compile(optimizer=tensorflow.optimizers.SGD(), loss='mean_absolute_error', metrics=[error_absolute_maximum,
+                  ratio_entry, ratio_exit_profit, ratio_hold, ratio_exit_loss, percent, percent_loss])
     model.summary()
 
+    early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10, mode='min', #  baseline=0.01,
+                                                              start_from_epoch=20)
     while True:
         try:
             # data_train batch_size data_test
