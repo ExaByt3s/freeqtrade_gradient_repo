@@ -1,6 +1,17 @@
 https://numpy.org/doc/stable/reference/generated/numpy.absolute.html
 https://numpy.org/doc/stable/reference/generated/numpy.any.html
+https://numpy.org/doc/stable/reference/generated/numpy.argsort.html
 https://numpy.org/doc/stable/reference/generated/numpy.full.html
 https://numpy.org/doc/stable/reference/generated/numpy.isnan.html
+https://numpy.org/doc/stable/reference/generated/numpy.logical_or.html
+https://numpy.org/doc/stable/reference/generated/numpy.mean.html
 https://numpy.org/doc/stable/reference/generated/numpy.nan_to_num.html
+https://numpy.org/doc/stable/reference/generated/numpy.nanmean.html
+https://numpy.org/doc/stable/reference/generated/numpy.quantile.html
+https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
+https://numpy.org/doc/stable/reference/generated/numpy.roll.html
+https://numpy.org/doc/stable/reference/generated/numpy.rollaxis.html
+https://numpy.org/doc/stable/reference/generated/numpy.squeeze.html
+https://numpy.org/doc/stable/reference/generated/numpy.transpose.html
 https://numpy.org/doc/stable/reference/generated/numpy.where.html
+https://numpy.org/doc/stable/reference/generated/numpy.transpose.html

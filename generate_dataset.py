@@ -1,9 +1,7 @@
-import sys
-from typing import Optional
+import typing
 import numpy
-import tensorflow
+import tensorflow_probability
 from numpy import ndarray
-from pandas import DataFrame
 
 from numba_wrapper import numba
 from tensorflow_wrapper import tensorflow
@@ -19,7 +17,7 @@ def _generate_answer(price: ndarray, threshold: float = 0.01, enum_unknown: int 
         answer = enum_unknown
 
         for j in range(1, len(price)):
-            if i + j > len(price) - 1 :
+            if i + j > len(price) - 1:
                 break
 
             price_current = price[i + j]
@@ -40,74 +38,6 @@ def _generate_answer(price: ndarray, threshold: float = 0.01, enum_unknown: int 
             break
 
     return (result_answer, result_answer != -1)
-
-'''
-@numba.jit
-def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool)) -> ndarray:
-    result = numpy.empty_like(input_a)
-
-    for i in range(len(input_a) - period, len(input_a)):
-        result[i] = fill_value
-
-    for i in range(len(input_a) - period):
-        result[i] = input_a[i + period]
-
-    return result
-'''
-
-'''
-# https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
-@numba.jit
-def shift(input_a: ndarray, period: int, fill_value: (int|float|str|bool) = numpy.nan) -> ndarray:
-    result = numpy.empty_like(input_a)
-
-    if period > 0:
-        result[:period] = fill_value
-        result[period:] = input_a[:-period]
-
-    elif period < 0:
-        result[period:] = fill_value
-        result[:period] = input_a[-period:]
-
-    else:
-        result[:] = input_a
-
-    return result
-'''
-
-import indicator
-
-@numba.jit(inline='always')
-def _generate_answer_sma(price: ndarray, window: int = 100, period_shift: int = -100) -> ndarray:
-    if period_shift >= 0:
-        raise Exception
-
-    sma = indicator.moving_average_simple(price, window)
-    sma_shift = shift(sma, period=period_shift, fill_value=numpy.nan)
-    result = sma_shift / sma
-    mask = ~numpy.isnan(result)
-    return (result, mask)
-
-def _generate_answer_ema(price: ndarray, window: int = 100, period_shift: int = -100) -> ndarray:
-    if period_shift >= 0:
-        raise Exception
-
-    # ema = indicator.ema(price, window)
-    ema = indicator.ema_window(price, window)
-    ema_shift = shift(ema, period=period_shift, fill_value=numpy.nan)
-    result = ema_shift / ema
-    mask = ~numpy.isnan(result)
-    return (result, mask)
-
-def _generate_answer_regression1(price: ndarray, window: int = 100, period_shift: int = -100) -> ndarray:
-    if period_shift >= 0:
-        raise Exception
-
-    y = indicator.regression_1(price, window)
-    y_shift = shift(y, period=period_shift)
-    result = y_shift / y
-    mask = ~numpy.isnan(result)
-    return (result, mask)
 
 @numba.jit(inline='always')
 def _generate_window(a: ndarray, mask: ndarray, window: int = 200, exclude_nan: bool = False) -> (ndarray, ndarray):
@@ -158,38 +88,12 @@ def _generate_window(a: ndarray, mask: ndarray, window: int = 200, exclude_nan: 
 
     return (result, mask_window)
 
-'''
-@numba.jit(inline='always')
-def _reduce_mask(a: ndarray, mask: ndarray) -> ndarray:
-    if a.shape != mask.shape:
-        raise Exception
-
-    if len(a.shape) != 1:
-        raise Exception
-
-    length = 0
-
-    for i in range(len(a)):
-        if mask[i]:
-            length += 1
-
-    result = numpy.empty(length, dtype=a.dtype)
-    index: int = 0
-
-    for i in range(len(a)):
-        if mask[i]:
-            result[index] = a[i]
-            index += 1
-
-    return result
-'''
-
 @numba.jit(inline='always')
 def _make_divisible(number: int, divisor: int) -> int:
     return number - (number % divisor)
 
-@tensorflow.jit()
-def _window_nomalization(input_a: ndarray, threshold_scale: Optional[float]) -> ndarray:
+@tensorflow.jit
+def _window_nomalization(input_a: ndarray, threshold_scale: typing.Optional[float]) -> ndarray:
 
     if len(input_a.shape) != 3:
         raise Exception
@@ -209,21 +113,95 @@ def _window_nomalization(input_a: ndarray, threshold_scale: Optional[float]) -> 
     result = (input_a - window_minimum) / (window_maximum - window_minimum)
     return result
 
-def _window_nomalization_v2(input_a: ndarray) -> ndarray:
+@tensorflow.jit
+def _window_nomalization_v2(input_a: ndarray) -> tensorflow.numpy.ndarray:
 
     if len(input_a.shape) != 3:
         raise Exception
 
-    window_index0 = numpy.repeat(input_a[:, 0], input_a.shape[1], axis=0).reshape(input_a.shape)
-    result = input_a / window_index0 - 1
+    window_index0 = tensorflow.numpy.repeat(input_a[:, 0], input_a.shape[1], axis=0)
+    window_index0 = tensorflow.numpy.reshape(window_index0, input_a.shape)
+
+    with numpy.errstate(divide='ignore'):
+        result = tensorflow.numpy.where(window_index0 != 0., input_a / window_index0, numpy.nan)
+
     return result
 
+@tensorflow.jit
+def _nomalization_absolute_first(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_0 = tensorflow.numpy.rollaxis(x, axis)[0]  # https://stackoverflow.com/questions/31363704/numpy-index-on-a-variable-axis
+    x_0 = tensorflow.numpy.expand_dims(x_0, axis=axis)
+    x_0 = tensorflow.numpy.absolute(x_0)
+    y = tensorflow.numpy.where(x_0 != 0., x / x_0, numpy.nan)
+    return y
 
-def _window_nomalization_zscore(x: ndarray, axis: int = None):
-    x_mean = x.mean(axis=axis, keepdims=True)
-    x_std  = numpy.std(x, axis=axis, keepdims=True)
-    zscore = (x - x_mean) / x_std
-    return zscore
+@tensorflow.jit
+def _nomalization_minmax(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_min = tensorflow.numpy.min(x, axis=axis, keepdims=True)
+    x_max = tensorflow.numpy.max(x, axis=axis, keepdims=True)
+    y = (x - x_min) / (x_max - x_min)
+    return y
+
+@tensorflow.jit
+def _nomalization_minmax_scale(x: tensorflow.numpy.ndarray, scale: float, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_min = tensorflow.numpy.min(x, axis=axis, keepdims=True) * (1 - scale)
+    x_max = tensorflow.numpy.max(x, axis=axis, keepdims=True) * (1 + scale)
+    y = (x - x_min) / (x_max - x_min)
+    return y
+
+@tensorflow.jit
+def _nomalization_minmax_scale_range(x: tensorflow.numpy.ndarray, scale: float, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_min = tensorflow.numpy.min(x, axis=axis, keepdims=True)
+    x_max = tensorflow.numpy.max(x, axis=axis, keepdims=True)
+    x_scale = (x_max - x_min) * scale
+    x_min = x_min - x_scale
+    x_max = x_max + x_scale
+    y = (x - x_min) / (x_max - x_min)
+    return y
+
+@tensorflow.jit
+def _nomalization_zscore(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_mean = tensorflow.numpy.mean(x, axis=axis, keepdims=True)
+    x_std = tensorflow.numpy.std(x, axis=axis, keepdims=True)
+    y = (x - x_mean) / x_std
+    return y
+
+@tensorflow.jit
+def _nomalization_zscore_robust(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_quantile = tensorflow_probability.stats.quantiles(x, num_quantiles=4, axis=axis, interpolation='linear', keepdims=True)
+    x_scale_robust = (x - x_quantile[2]) / (x_quantile[3] - x_quantile[1])
+    y = x_scale_robust * 1.3489
+    return y
+
+@tensorflow.jit
+def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'absolute_first') -> tensorflow.numpy.ndarray:
+
+    if len(x.shape) != 3:
+        raise Exception
+
+    if x.shape[1] < 2:
+        raise Exception
+
+    if version == 'v1':
+        x = _window_nomalization(x, threshold_scale=0.005)
+    elif version == 'v2':
+        x = _window_nomalization_v2(x)
+    elif version == 'absolute_first':
+        x = _nomalization_absolute_first(x, axis=1)
+    elif version == 'minmax':
+        x = _nomalization_minmax(x, axis=1)
+    elif version == 'minmax_scale':
+        x = _nomalization_minmax_scale(x, scale=0.005, axis=1)
+    elif version == 'minmax_scale_range':
+        x = _nomalization_minmax_scale_range(x, scale=0.01, axis=1)
+    elif version == 'zscore':
+        x = _nomalization_zscore(x, axis=1)
+    elif version == 'zscore_robust':
+        x = _nomalization_zscore_robust(x, axis=1)
+    else:
+        raise Exception
+
+    return x
 
 def generate_dataset(x: ndarray, x_mask: ndarray, y: ndarray, y_mask: ndarray, window: int, batch_size: int = 200,
                      split_ratio: float = 0.8, train_include_test: bool = False, enable_window_nomalization: bool = False,
@@ -253,11 +231,6 @@ def generate_dataset(x: ndarray, x_mask: ndarray, y: ndarray, y_mask: ndarray, w
     if not 0 <= split_ratio <= 1:
         raise Exception
 
-    # y, y_mask = _generate_answer(input_close, threshold=threshold, enum_unknown=-1, enum_up=1, enum_down=0)
-    # y, y_mask = _generate_answer_sma(input_close, window=100, period_shift=-100)
-    # y, y_mask = _generate_answer_ema(input_close, window=200, period_shift=-200)
-    # y, y_mask = _generate_answer_regression1(input_close, window=100, period_shift=-100)
-
     y_mask &= ~numpy.isnan(y).any(axis=1)
     x, x_mask = _generate_window(x, (x_mask & y_mask), window=window, exclude_nan=True)
     y = y[x_mask]
@@ -265,11 +238,8 @@ def generate_dataset(x: ndarray, x_mask: ndarray, y: ndarray, y_mask: ndarray, w
     if len(x) != len(y):
         raise Exception
 
-    if enable_window_nomalization and window >= 3:
-        if True:
-            x = _window_nomalization(x, threshold_scale=0.005)
-        else:
-            x = _window_nomalization_v2(x)
+    if enable_window_nomalization:
+        x = window_nomalization(x)
 
     if encode_onehot:
         y = tensorflow.keras.utils.to_categorical(y)
@@ -310,10 +280,7 @@ def generate_dataset_predict(x: ndarray, x_mask: ndarray, window: int, batch_siz
 
     x, x_mask = _generate_window(x, x_mask, window=window, exclude_nan=True)
 
-    if enable_window_nomalization and window >= 3:
-        if True:
-            x = _window_nomalization(x, threshold_scale=0.005)
-        else:
-            x = _window_nomalization_v2(x)
+    if enable_window_nomalization:
+        x = window_nomalization(x)
 
     return (x, x_mask)

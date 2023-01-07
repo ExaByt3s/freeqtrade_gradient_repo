@@ -1,10 +1,17 @@
 import numba
 
-def _jit(*args, **kwargs):
-    kwargs['nopython'] = True
-    kwargs['cache'] = True
+# export NUMBA_NUM_THREADS='4'
+# export NUMBA_ENABLE_CUDASIM='1'
+# export NUMBA_DEBUG_PRINT_AFTER='ir_legalization'
 
-    if False:
+def _jit(*args, **kwargs):
+    if 'nopython' not in kwargs:
+        kwargs['nopython'] = True
+
+    if 'cache' not in kwargs:
+        kwargs['cache'] = True
+
+    if 'inline' not in kwargs and False:
         kwargs['inline'] = 'always'
 
     return numba.core.decorators.jit(*args, **kwargs)

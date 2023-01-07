@@ -1,4 +1,4 @@
 tensorflow
-tensorflow-addons
-tensorflow-io
-tensorflow-probability
+tensorflow_addons
+tensorflow_io
+tensorflow_probability

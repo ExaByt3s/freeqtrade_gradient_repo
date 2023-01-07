@@ -47,11 +47,12 @@ class StrategyNN(IStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config=config)
         self.indent = 4
-        self.window_line = 100
+        self.window_line = 200
         self.threshold_entry = 0.03
         self.threshold_exit_profit = 0.02
         self.threshold_exit_loss = 0.01
         self.threshold_line = 0.01
+        self.time_position_maximum = timedelta(minutes=timeframe_to_minutes(config['timeframe']) * self.window_line)
 
     def bot_start(self, **kwargs) -> None:
         log.info('')
@@ -174,13 +175,24 @@ class StrategyNN(IStrategy):
             # dataframe['%minute_of_hour'] = dataframe['date'].dt.minute / 60
 
             log.debug(f'%{pair}-heikin_ashi-close_{self.timeframe}')
+
+            '''
             dataframe['line'] = (
                 indicator.moving_average_simple(dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy(), 100)
             )
-            # dataframe['line'] = (
-                # dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].rolling(window=100).max()
-            # )
             dataframe['&prediction_line'] = indicator.shift(dataframe['line'].to_numpy(), period=-100) / dataframe['line']
+
+            dataframe['line2'] = (
+                dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].rolling(window=100).max()
+            )
+            dataframe['&prediction_line2'] = indicator.shift(dataframe['line2'].to_numpy(), period=-100) / dataframe['line2']
+            '''
+
+            x = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
+            x = indicator.profit_long(x, 200)
+            x = indicator.sort_mean(x, 20, 100)
+            dataframe['&prediction_line'] = x
+
             # print(dataframe[['date', '&prediction_line']].to_markdown())
 
         return dataframe
@@ -195,10 +207,10 @@ class StrategyNN(IStrategy):
             , ['enter_long', 'enter_tag']
         ] = (1, 'Long')
 
-        dataframe.loc[
-            ((dataframe['do_predict'] == 1) & (dataframe['&prediction_line'] < 1 - self.threshold_entry))
-            , ['enter_short', 'enter_tag']
-        ] = (1, 'Short')
+        # dataframe.loc[
+        #     ((dataframe['do_predict'] == 1) & (dataframe['&prediction_line'] < 1 - self.threshold_entry))
+        #     , ['enter_short', 'enter_tag']
+        # ] = (1, 'Short')
 
         return dataframe
 
@@ -242,26 +254,18 @@ class StrategyNN(IStrategy):
     def custom_exit(self, pair: str, trade: Trade, current_time: datetime, current_rate: float, current_profit: float,
                     **kwargs) -> Optional[Union[str, bool]]:
 
-        time_position_maximum = timedelta(minutes=timeframe_to_minutes(self.timeframe) * self.window_line)
-
-        if (current_time - trade.open_date_utc) < time_position_maximum:
-            return False
-
-        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-        candle_last = dataframe.iloc[-1].squeeze()
-
-        if trade.trade_direction == 'long' and candle_last['&prediction_line'] > (1 + 0.02):
-            return False
-
-        if trade.trade_direction == 'short' and candle_last['&prediction_line'] < (1 - 0.02):
-            return False
+        # dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+        # candle_last = dataframe.iloc[-1].squeeze()
 
         reason = None
 
-        if current_profit > 0:
+        if (current_time - trade.open_date_utc) > self.time_position_maximum:
+            reason = 'timeout'
+
+        if current_profit > self.threshold_exit_profit:
             reason = 'profit'
 
-        if current_profit < 0:
+        if current_profit < -self.threshold_exit_loss:
             reason = 'loss'
 
         if reason is None:
@@ -287,52 +291,52 @@ class StrategyNN(IStrategy):
             color_begin = color_ansi['red']
 
         log.info(
-            f'{color_begin}'
             f'current_time:{current_time}'
             f' pair:{pair}'
             f' reason:{reason}'
+            f'{color_begin}'
             f' current_profit:{current_profit}'
+            f'{color_end}'
             f' open_rate:{trade.open_rate:0.4f}'
             f' current_rate:{current_rate:0.4f}'
             f' timedelta:{current_time - trade.open_date_utc}'
-            f'{color_end}'
         )
 
         return reason
 
-    def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str,
-                            current_time: datetime, entry_tag: Optional[str], side: str, **kwargs) -> bool:
+    # def confirm_trade_entry(self, pair: str, order_type: str, amount: float, rate: float, time_in_force: str,
+    #                         current_time: datetime, entry_tag: Optional[str], side: str, **kwargs) -> bool:
 
-        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-        candle_last = dataframe.iloc[-1].squeeze()
+    #     dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+    #     candle_last = dataframe.iloc[-1].squeeze()
 
-        if side == 'long':
-            if rate > (candle_last['line'] * (1 + self.threshold_line)):
-                log.info('')
-                return False
-        else:
-            if rate < (candle_last['line'] * (1 - self.threshold_line)):
-                log.info('')
-                return False
+    #     if side == 'long':
+    #         if rate > (candle_last['line'] * (1 + self.threshold_line)):
+    #             log.info('')
+    #             return False
+    #     else:
+    #         if rate < (candle_last['line'] * (1 - self.threshold_line)):
+    #             log.info('')
+    #             return False
 
-        return True
+    #     return True
 
-    def confirm_trade_exit(self, pair: str, trade: Trade, order_type: str, amount: float, rate: float, time_in_force: str,
-                           exit_reason: str, current_time: datetime, **kwargs) -> bool:
+    # def confirm_trade_exit(self, pair: str, trade: Trade, order_type: str, amount: float, rate: float, time_in_force: str,
+    #                        exit_reason: str, current_time: datetime, **kwargs) -> bool:
 
-        dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
-        candle_last = dataframe.iloc[-1].squeeze()
+    #     dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
+    #     candle_last = dataframe.iloc[-1].squeeze()
 
-        if trade.trade_direction == 'long':
-            if rate < (candle_last['line'] * (1 - self.threshold_line)):
-                log.info('')
-                return False
-        else:
-            if rate > (candle_last['line'] * (1 + self.threshold_line)):
-                log.info('')
-                return False
+    #     if trade.trade_direction == 'long':
+    #         if rate < (candle_last['line'] * (1 - self.threshold_line)):
+    #             log.info('')
+    #             return False
+    #     else:
+    #         if rate > (candle_last['line'] * (1 + self.threshold_line)):
+    #             log.info('')
+    #             return False
 
-        return True
+    #     return True
 
     def leverage(self, pair: str, current_time: datetime, current_rate: float, proposed_leverage: float, max_leverage: float,
                  entry_tag: Optional[str], side: str, **kwargs) -> float:

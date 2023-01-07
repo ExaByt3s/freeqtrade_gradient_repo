@@ -1,2 +1,3 @@
-su - root -c "cd /usr/bin; wget -O- https://getmic.ro | GETMICRO_REGISTER=y sh"
-cp /usr/bin/micro freqtrade/freqtrade/.env/bin/micro
+INSTALL_PREFIX='/usr'
+INSTALL_PATH="${INSTALL_PREFIX}/bin"
+su - root -c "mkdir --parents ${INSTALL_PATH} && cd ${INSTALL_PATH} && wget -O - https://getmic.ro | sh"

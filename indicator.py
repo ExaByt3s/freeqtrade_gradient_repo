@@ -56,41 +56,51 @@ def _generate_window(x: ndarray, window: int, x_mask: Optional[ndarray] = None) 
     return (y, y_mask)
 '''
 
-@tensorflow.jit()
+@tensorflow.jit
 def _generate_window(x: ndarray, window: int, x_mask: Optional[ndarray] = None) -> (ndarray, ndarray):
 
-    if len(x) < window:
+    if x.shape[0] < window:
         raise Exception
 
     if window < 1:
         raise Exception
 
     if x_mask is None:
-        x_mask = tensorflow.numpy.full(len(x), True)
+        x_mask = tensorflow.numpy.full(x.shape[0], True)
 
-    if x_mask is not None and len(x) != len(x_mask):
+    if x_mask is not None and x.shape[0] != x_mask.shape[0]:
         raise Exception
 
     if len(x.shape) == 1:
         y_shape = [x.shape[0], window]
+        x_slice_begin = lambda i: [i + 1 - window]
+        x_slice_size = [window]
     elif len(x.shape) == 2:
         y_shape = [x.shape[0], window, x.shape[1]]
+        x_slice_begin = lambda i: [i + 1 - window, 0]
+        x_slice_size = [window, x.shape[1]]
     elif len(x.shape) == 3:
         y_shape = [x.shape[0], window, x.shape[1], x.shape[2]]
+        x_slice_begin = lambda i: [i + 1 - window, 0, 0]
+        x_slice_size = [window, x.shape[1], x.shape[2]]
     else:
         raise Exception
 
     x_mask = tensorflow.map_fn(fn=lambda i: x_mask[i] & tensorflow.numpy.any(~tensorflow.numpy.isnan(x[i])),
-                               elems=tensorflow.numpy.arange(len(x)), fn_output_signature='bool')
+                               elems=tensorflow.numpy.arange(x.shape[0]), fn_output_signature='bool')
 
-    y = tensorflow.map_fn(fn=(lambda i: tensorflow.numpy.full(y_shape[1:], numpy.nan) if i < window - 1 or not x_mask[i]
-                              else x[i + 1 - window:i + 1]),
-                          elems=tensorflow.numpy.arange(len(x)), fn_output_signature=x.dtype)
+    y = tensorflow.map_fn(fn=(lambda i: tensorflow.numpy.where(tensorflow.numpy.logical_or(i < (window - 1), ~x_mask[i]),
+                                                               tensorflow.numpy.full(y_shape[1:], numpy.nan),
+                                                               tensorflow.slice(x, x_slice_begin(i), x_slice_size))),
+                          elems=tensorflow.numpy.arange(x.shape[0]), fn_output_signature=x.dtype)
 
-    y_mask = tensorflow.map_fn(fn=(lambda i: False if i < window - 1 or not x_mask[i]
-                                   else tensorflow.numpy.any(~tensorflow.numpy.isnan(x[i + 1 - window:i + 1]))),
-                               elems=tensorflow.numpy.arange(len(x)), fn_output_signature='bool')
+    y_mask = tensorflow.map_fn(fn=(lambda i: tensorflow.numpy.where(
+                                   tensorflow.numpy.logical_or(i < (window - 1), ~x_mask[i]),
+                                   False, tensorflow.numpy.any(~tensorflow.numpy.isnan(x[i + 1 - window:i + 1])))),
+                               elems=tensorflow.numpy.arange(x.shape[0]), fn_output_signature='bool')
 
+    # y = tensorflow.ensure_shape(y, y_shape)
+    # y = tensorflow.reshape(y, y_shape)
     return (y, y_mask)
 
 @numba.jit
@@ -371,7 +381,7 @@ def rci_v2(close: numpy.ndarray, timeperiod: int) -> numpy.ndarray:
 
 # https://stackoverflow.com/questions/30399534/shift-elements-in-a-numpy-array
 @numba.jit
-def shift(input_a: ndarray, period: int, fill_value = numpy.nan) -> ndarray:  # (int|float|str|bool)
+def shift(input_a: ndarray, period: int, fill_value=numpy.nan) -> ndarray:  # (int|float|str|bool)
     result = numpy.empty_like(input_a)
 
     if period > 0:
@@ -386,3 +396,71 @@ def shift(input_a: ndarray, period: int, fill_value = numpy.nan) -> ndarray:  # 
         result[:] = input_a
 
     return result
+
+@tensorflow.jit
+def tensorflow_shift(x: ndarray, period: int, fill_value=numpy.nan) -> tensorflow.numpy.ndarray:  # (int|float|str|bool)
+    if period == 0:
+        return x
+
+    index = tensorflow.numpy.arange(x.shape[0])
+    x_roll = tensorflow.numpy.roll(x, period)
+
+    if period > 0:
+        mask = index >= period
+
+    elif period < 0:
+        mask = index < (index.shape[0] + period)
+
+    y = tensorflow.numpy.where(mask, x_roll, fill_value)
+
+    return y
+
+@tensorflow.jit
+def profit_long(input_a: tensorflow.numpy.ndarray, window: int) -> tensorflow.numpy.ndarray:
+
+    if len(input_a.shape) != 1:
+        raise Exception
+
+    if input_a.shape[0] < window + 1:
+        raise Exception
+
+    x, x_mask = _generate_window(x=input_a, window=window, x_mask=None)
+
+    x_shift = tensorflow_shift(input_a, window)
+    window_index0 = tensorflow.numpy.repeat(x_shift, window)
+    window_index0 = tensorflow.numpy.reshape(window_index0, x.shape)
+
+    with numpy.errstate(divide='ignore'):
+        result = tensorflow.numpy.where(window_index0 != 0., x / window_index0, numpy.nan)
+
+    return result
+
+@tensorflow.jit
+def tensorflow_numpy_mean(a: numpy.ndarray, axis=None, where: numpy.ndarray = None) -> tensorflow.numpy.ndarray:
+
+    if a.shape != where.shape:
+        raise Exception
+
+    y = tensorflow.numpy.where(where, a, numpy.nan)
+    y = tensorflow.numpy.nanmean(y, keepdims=True, axis=axis)
+    # y = tensorflow.numpy.nanmean(y, keepdims=False, axis=axis)
+    return y
+
+@tensorflow.jit
+def sort_mean(x_input: numpy.ndarray, order_begin: int, order_end: int) -> tensorflow.numpy.ndarray:
+
+    if not 0 <= order_begin <= x_input.shape[0]:
+        raise Exception
+
+    if not 0 <= order_end <= x_input.shape[0] + 1:
+        raise Exception
+
+    if order_begin > order_end:
+        raise Exception
+
+    axis = len(x_input.shape) - 1
+    x_index = tensorflow.numpy.arange(x_input.shape[axis])
+    x_index_order = tensorflow.numpy.argsort(x_input, axis=axis)
+    x_mask = tensorflow.numpy.logical_and(order_begin <= x_index_order, x_index_order < order_end)
+    y = tensorflow_numpy_mean(x_input, axis=axis, where=x_mask)
+    return y
