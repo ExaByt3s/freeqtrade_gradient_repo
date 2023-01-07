@@ -191,6 +191,7 @@ class StrategyNN(IStrategy):
             x = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
             x = indicator.profit_long(x, 200)
             x = indicator.sort_mean(x, 20, 100)
+            x = indicator.shift(x.numpy(), -200)
             dataframe['&prediction_line'] = x
 
             # print(dataframe[['date', '&prediction_line']].to_markdown())
@@ -265,8 +266,8 @@ class StrategyNN(IStrategy):
         if current_profit > self.threshold_exit_profit:
             reason = 'profit'
 
-        if current_profit < -self.threshold_exit_loss:
-            reason = 'loss'
+        # if current_profit < -self.threshold_exit_loss:
+            # reason = 'loss'
 
         if reason is None:
             return False

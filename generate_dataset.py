@@ -174,7 +174,7 @@ def _nomalization_zscore_robust(x: tensorflow.numpy.ndarray, axis: int = None) -
     return y
 
 @tensorflow.jit
-def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'absolute_first') -> tensorflow.numpy.ndarray:
+def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'zscore_robust') -> tensorflow.numpy.ndarray:
 
     if len(x.shape) != 3:
         raise Exception

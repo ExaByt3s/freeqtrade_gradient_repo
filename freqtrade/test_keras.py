@@ -192,7 +192,7 @@ def percent_loss(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor, rate_entr
     result = (sum_long + sum_short) * 100
     return result
 
-enable_cache = True
+enable_cache = False
 cachefile = 'cache.pickle'
 
 if enable_cache and os.path.exists(cachefile):
@@ -256,7 +256,6 @@ with scope():
 
     except KeyboardInterrupt:
         print('\nPaused: KeyboardInterrupt')
-        break
 
     # model.save('./model')
 

@@ -41,8 +41,8 @@ class TensorFlowRegression(TensorFlowBase.TensorFlowBase):
 
         x_train, y_train, x_test, y_test = (
             generate_dataset.generate_dataset(feature, feature_mask, label, label_mask, window=self.CONV_WIDTH,
-                                              batch_size=batch_size, split_ratio=0.95, train_include_test=False,
-                                              enable_window_nomalization=True)  # train_include_test=True
+                                              batch_size=batch_size, split_ratio=0.90, train_include_test=True,
+                                              enable_window_nomalization=True)
         )
 
         if len(x_train) == 0 or len(x_test) == 0:

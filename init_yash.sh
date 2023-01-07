@@ -3,6 +3,7 @@ export TF_POPLAR_FLAGS="--executable_cache_path=/tmp/poplar_exec --max_compilati
 
 alias e="${EDITOR}"
 alias edit="${EDITOR}"
+alias py='python'
 unset COLUMNS
 
 # pip install -U tensorflow
@@ -18,4 +19,4 @@ export PYTHONPATH="/notebooks/freqtrade/freqtrade/.env/lib/python3.8/site-packag
 export COLORTERM='truecolor'
 export XDG_CONFIG_HOME='/notebooks/setting'
 
-mkdir /tmp/model
+mkdir -p /tmp/model
