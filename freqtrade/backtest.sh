@@ -1,1 +1,1 @@
-freqtrade backtesting --timerange=20220608-20220616 -p ETH/USDT
+freqtrade backtesting --timerange=20220617-20220618 -p BTC/USDT

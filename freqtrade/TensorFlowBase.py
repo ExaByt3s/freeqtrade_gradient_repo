@@ -1,6 +1,6 @@
 import logging
-from time import time
-from typing import Any
+import time
+import typing
 
 import pandas
 from freqtrade.freqai.data_kitchen import FreqaiDataKitchen
@@ -14,16 +14,13 @@ class TensorFlowBase(IFreqaiModel):
         super().__init__(config=config)
         self.keras = True
 
-        if self.ft_params.get("DI_threshold", 0):
-            self.ft_params["DI_threshold"] = 0
-            logger.warning("DI threshold is not configured for Keras models yet. Deactivating.")
+        if 'DI_threshold' in self.ft_params:
+            self.ft_params['DI_threshold'] = 0
+            logger.warning('DI threshold is not configured for Keras models yet. Deactivating.')
 
-    def train(
-        self, unfiltered_df: pandas.DataFrame, pair: str, dk: FreqaiDataKitchen, **kwargs
-    ) -> Any:
-        # print(unfiltered_df)
-        # print(list(unfiltered_df))
-        start_time = time()
+    def train(self, unfiltered_df: pandas.DataFrame, pair: str, dk: FreqaiDataKitchen, **kwargs) -> typing.Any:
+
+        start_time = time.perf_counter()
 
         # filter the features requested by user in the configuration file and elegantly handle NaNs
         features_filtered, labels_filtered = dk.filter_features(
@@ -43,15 +40,10 @@ class TensorFlowBase(IFreqaiModel):
         # optional additional data cleaning/analysis
         self.data_cleaning_train(dk)
 
-        logger.info(
-            f"Training model on {len(dk.data_dictionary['train_features'].columns)} features"
-        )
-        logger.info(f"Training model on {len(data_dictionary['train_features'])} data points")
-
         data_dictionary['unfiltered_df'] = unfiltered_df
         model = self.fit(data_dictionary, dk)
 
-        end_time = time()
+        end_time = time.perf_counter()
 
         logger.info(f"{pair} ({end_time - start_time:.2f} secs)")
 

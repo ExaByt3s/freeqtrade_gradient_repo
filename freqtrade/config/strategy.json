@@ -22,13 +22,13 @@
         "feature_parameters": {
             "include_timeframes": [
                 "5m",
-                "15m",
+                //"15m",
                 //"1h",
                 //"1d",
             ],
             "include_corr_pairlist": [
                 //"BTC/USDT",
-                "ETH/USDT",
+                //"ETH/USDT",
                 //"XRP/USDT",
             ],
             "label_period_candles": 20,
