@@ -48,8 +48,8 @@ class StrategyNN(IStrategy):
         super().__init__(config=config)
         self.indent = 4
         self.window_line = 100
-        self.threshold_entry = 0.03
-        self.threshold_exit_profit = 0.02
+        self.threshold_entry = 0.025
+        self.threshold_exit_profit = 0.015
         self.threshold_exit_loss = 0.01
         self.threshold_line = 0.01
         self.time_position_maximum = timedelta(minutes=timeframe_to_minutes(config['timeframe']) * self.window_line)

@@ -1,1 +1,1 @@
-freqtrade backtesting --timerange=20220617-20220618 -p BTC/USDT
+freqtrade backtesting --timerange=20221201-20221203 -p XRP/USDT
