@@ -47,7 +47,7 @@ class StrategyNN(IStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config=config)
         self.indent = 4
-        self.window_line = 200
+        self.window_line = 100
         self.threshold_entry = 0.03
         self.threshold_exit_profit = 0.02
         self.threshold_exit_loss = 0.01
@@ -176,23 +176,19 @@ class StrategyNN(IStrategy):
 
             log.debug(f'%{pair}-heikin_ashi-close_{self.timeframe}')
 
-            '''
-            dataframe['line'] = (
-                indicator.moving_average_simple(dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy(), 100)
-            )
-            dataframe['&prediction_line'] = indicator.shift(dataframe['line'].to_numpy(), period=-100) / dataframe['line']
+            line_price = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
+            dataframe['line_price'] = line_price
+            line = indicator.moving_average_simple(line_price, 100)
+            # line = indicator.ema_window(line_price, 100)
+            # line = ta.WMA(line_price, 100)
+            dataframe['line'] = line
+            dataframe['&prediction_line'] = indicator.shift(line, period=-100) / line
 
-            dataframe['line2'] = (
-                dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].rolling(window=100).max()
-            )
-            dataframe['&prediction_line2'] = indicator.shift(dataframe['line2'].to_numpy(), period=-100) / dataframe['line2']
-            '''
-
-            x = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
-            x = indicator.profit_long(x, 200)
-            x = indicator.sort_mean(x, 20, 100)
-            x = indicator.shift(x.numpy(), -200)
-            dataframe['&prediction_line'] = x
+            # x = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
+            # x = indicator.profit_long(x, 100)
+            # x = indicator.sort_mean(x, 0, 100)
+            # x = indicator.shift(x.numpy(), -100)
+            # dataframe['&prediction_line'] = x
 
             # print(dataframe[['date', '&prediction_line']].to_markdown())
 
@@ -204,7 +200,13 @@ class StrategyNN(IStrategy):
         log.debug(list(dataframe))
 
         dataframe.loc[
-            ((dataframe['do_predict'] == 1) & (dataframe['&prediction_line'] > 1 + self.threshold_entry))
+            (
+                (dataframe['do_predict'] == 1)
+                &
+                (dataframe['&prediction_line'] > 1 + self.threshold_entry)
+                &
+                ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] > 1 + 0.02)
+            )
             , ['enter_long', 'enter_tag']
         ] = (1, 'Long')
 
@@ -266,8 +268,8 @@ class StrategyNN(IStrategy):
         if current_profit > self.threshold_exit_profit:
             reason = 'profit'
 
-        # if current_profit < -self.threshold_exit_loss:
-            # reason = 'loss'
+        if current_profit < -self.threshold_exit_loss:
+            reason = 'loss'
 
         if reason is None:
             return False

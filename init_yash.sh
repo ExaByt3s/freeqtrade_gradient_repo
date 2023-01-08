@@ -6,8 +6,6 @@ alias edit="${EDITOR}"
 alias py='python'
 unset COLUMNS
 
-# pip install -U tensorflow
-
 # . ./.venv/bin/activate
 . ./freqtrade/freqtrade/.env/bin/activate
 

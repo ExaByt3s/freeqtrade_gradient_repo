@@ -126,7 +126,7 @@ def error_absolute_maximum(y_true: tensorflow.Tensor, y_pred: tensorflow.Tensor)
     result = tensorflow.numpy.amax(tensorflow.numpy.absolute(y_true - y_pred))
     return result
 
-_rate_entry = 0.04
+_rate_entry = 0.03
 _rate_exit_profit = 0.02
 _rate_exit_loss = 0.001
 
@@ -257,6 +257,7 @@ with scope():
     except KeyboardInterrupt:
         print('\nPaused: KeyboardInterrupt')
 
-    # model.save('./model')
+    if False:
+        model.save('./model')
 
 sys.exit()

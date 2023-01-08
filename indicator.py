@@ -403,7 +403,7 @@ def tensorflow_shift(x: ndarray, period: int, fill_value=numpy.nan) -> tensorflo
         return x
 
     index = tensorflow.numpy.arange(x.shape[0])
-    x_roll = tensorflow.numpy.roll(x, period)
+    x_roll = tensorflow.numpy.roll(x, period, axis=(len(x.shape) - 1))
 
     if period > 0:
         mask = index >= period
