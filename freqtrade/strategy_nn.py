@@ -210,10 +210,16 @@ class StrategyNN(IStrategy):
             , ['enter_long', 'enter_tag']
         ] = (1, 'Long')
 
-        # dataframe.loc[
-        #     ((dataframe['do_predict'] == 1) & (dataframe['&prediction_line'] < 1 - self.threshold_entry))
-        #     , ['enter_short', 'enter_tag']
-        # ] = (1, 'Short')
+        dataframe.loc[
+            (
+                (dataframe['do_predict'] == 1)
+                &
+                (dataframe['&prediction_line'] < 1 - self.threshold_entry)
+                &
+                ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] < 1 - 0.02)
+            )
+            , ['enter_short', 'enter_tag']
+        ] = (1, 'Short')
 
         return dataframe
 
