@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 class TensorFlowRegression(TensorFlowBase.TensorFlowBase):
     def __init__(self, config: dict) -> None:
         super().__init__(config=config)
-        self.CONV_WIDTH = 200
+        self.CONV_WIDTH = 400
 
     def fit(self, data_dictionary: Dict[str, Any], dk: FreqaiDataKitchen) -> Any:
         dataframe = data_dictionary['unfiltered_df']
@@ -49,15 +49,15 @@ class TensorFlowRegression(TensorFlowBase.TensorFlowBase):
             raise Exception
 
         dataset_train = tensorflow.data.Dataset.from_tensor_slices((x_train, y_train))
-        dataset_test = tensorflow.data.Dataset.from_tensor_slices((x_test, y_test))
+        # dataset_test = tensorflow.data.Dataset.from_tensor_slices((x_test, y_test))
 
         dataset_train = dataset_train.batch(batch_size, drop_remainder=True)
-        dataset_test = dataset_test.batch(batch_size, drop_remainder=True)
+        # dataset_test = dataset_test.batch(batch_size, drop_remainder=True)
 
         model = self.get_init_model(dk.pair)
 
         if model is None:
-            log.info('Creating new model')
+            log.info('Creating a new model.')
 
             input_shape = input_dims
             output_class = n_labels
@@ -69,15 +69,17 @@ class TensorFlowRegression(TensorFlowBase.TensorFlowBase):
                 metrics=[],
             )
             model.summary()
-            max_epochs = 50
+            # max_epochs = 50
+            max_epochs = 200
 
         else:
-            log.info('Updating old model')
+            log.info('Updating the old model.')
             max_epochs = 10
 
-        early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10, mode='min', start_from_epoch=20)
+        # early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10, mode='min', start_from_epoch=20)
 
-        model.fit(dataset_train, epochs=max_epochs, shuffle=False, validation_data=dataset_test, callbacks=[early_stopping])
+        # model.fit(dataset_train, epochs=max_epochs, shuffle=False, callbacks=[early_stopping])
+        model.fit(dataset_train, epochs=max_epochs, shuffle=False)
         return model
 
     def predict(self, unfiltered_dataframe: pandas.DataFrame, dk: FreqaiDataKitchen, first=True

@@ -18,6 +18,8 @@ from pandas import DataFrame
 from technical import qtpylib
 
 import indicator
+import plot
+
 
 # log = logging.getLogger(__name__)
 # log.setLevel(logging.DEBUG)
@@ -47,7 +49,7 @@ class StrategyNN(IStrategy):
     def __init__(self, config: dict) -> None:
         super().__init__(config=config)
         self.indent = 4
-        self.window_line = 100
+        self.window_line = 50
         self.threshold_entry = 0.025
         self.threshold_exit_profit = 0.015
         self.threshold_exit_loss = 0.01
@@ -88,9 +90,9 @@ class StrategyNN(IStrategy):
         informative[f'%{pair}-heikin_ashi-close'] = (
             (informative['open'] + informative['high'] + informative['low'] + informative['close']) / 4
         )
-        informative[f'%{pair}-moving_average_simple-200'] = (
-            indicator.moving_average_simple(informative[f'%{pair}-heikin_ashi-close'].to_numpy(), window=200)
-        )
+        # informative[f'%{pair}-moving_average_simple-200'] = (
+        #     indicator.moving_average_simple(informative[f'%{pair}-heikin_ashi-close'].to_numpy(), window=200)
+        # )
 
         # informative[f'{pair}-heikin_ashi-close'] = (
             # (informative['open'] + informative['high'] + informative['low'] + informative['close']) / 4
@@ -175,28 +177,34 @@ class StrategyNN(IStrategy):
             # dataframe['%minute_of_hour'] = dataframe['date'].dt.minute / 60
 
             log.debug(f'%{pair}-heikin_ashi-close_{self.timeframe}')
-
             line_price = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
             dataframe['line_price'] = line_price
-            line = indicator.moving_average_simple(line_price, 100)
-            # line = indicator.ema_window(line_price, 100)
-            # line = ta.WMA(line_price, 100)
-            dataframe['line'] = line
-            dataframe['&prediction_line'] = indicator.shift(line, period=-100) / line
 
-            # x = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
+            # line = indicator.moving_average_simple(line_price, self.window_line)
+            line = indicator.ema_window(line_price, self.window_line)
+            # line = ta.WMA(line_price, self.window_line)
+            dataframe['line'] = line
+            dataframe['&prediction_line'] = indicator.shift(line, period=-self.window_line) / line
+
+            # line = pandas.Series(line_price).rolling(100).max().to_numpy()
+            # dataframe['line2'] = line
+            # dataframe['&prediction_line2'] = indicator.shift(line, period=-100) / line
+
+            # line = pandas.Series(line_price).rolling(100).min().to_numpy()
+            # dataframe['line3'] = line
+            # dataframe['&prediction_line3'] = indicator.shift(line, period=-100) / line
+
+            # x = line_price
             # x = indicator.profit_long(x, 100)
             # x = indicator.sort_mean(x, 0, 100)
+            # dataframe['line'] = x.numpy()
             # x = indicator.shift(x.numpy(), -100)
             # dataframe['&prediction_line'] = x
-
-            # print(dataframe[['date', '&prediction_line']].to_markdown())
 
         return dataframe
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe = self.freqai.start(dataframe, metadata, self)
-        # print(dataframe[['date', '&prediction_line']].to_markdown())
         log.debug(list(dataframe))
 
         dataframe.loc[
@@ -204,8 +212,8 @@ class StrategyNN(IStrategy):
                 (dataframe['do_predict'] == 1)
                 &
                 (dataframe['&prediction_line'] > 1 + self.threshold_entry)
-                &
-                ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] > 1 + 0.02)
+                # &
+                # ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] > 1 + 0.02)
             )
             , ['enter_long', 'enter_tag']
         ] = (1, 'Long')
@@ -215,11 +223,104 @@ class StrategyNN(IStrategy):
                 (dataframe['do_predict'] == 1)
                 &
                 (dataframe['&prediction_line'] < 1 - self.threshold_entry)
-                &
-                ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] < 1 - 0.02)
+                # &
+                # ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] < 1 - 0.02)
             )
             , ['enter_short', 'enter_tag']
         ] = (1, 'Short')
+
+        if True:
+            dataframe['prediction_line'] = dataframe['line'] * dataframe['&prediction_line']
+            dataframe['line_shift'] = dataframe['line'].shift(-self.window_line)
+
+            # dataframe['prediction_line2'] = dataframe['line2'] * dataframe['&prediction_line2']
+            # dataframe['line_shift2'] = dataframe['line2'].shift(-self.window_line)
+
+            # dataframe['prediction_line3'] = dataframe['line3'] * dataframe['&prediction_line3']
+            # dataframe['line_shift3'] = dataframe['line3'].shift(-self.window_line)
+
+            # dataframe['line_shift'] = dataframe['line'].shift(-self.window_line)
+
+            addplot = [
+                {
+                    'column': 'line',
+                    'kind': 'line',
+                    'color': 'gray',
+                },
+                {
+                    'column': 'line_shift',
+                    'kind': 'line',
+                    'color': 'red',
+                },
+                {
+                    'column': 'prediction_line',
+                    'kind': 'line',
+                    'color': 'blue',
+                },
+                # {
+                #     'column': 'line2',
+                #     'kind': 'line',
+                #     'color': 'gray',
+                # },
+                # {
+                #     'column': 'line_shift2',
+                #     'kind': 'line',
+                #     'color': 'red',
+                # },
+                # {
+                #     'column': 'prediction_line2',
+                #     'kind': 'line',
+                #     'color': 'blue',
+                # },
+                # {
+                #     'column': 'line3',
+                #     'kind': 'line',
+                #     'color': 'gray',
+                # },
+                # {
+                #     'column': 'line_shift3',
+                #     'kind': 'line',
+                #     'color': 'red',
+                # },
+                # {
+                #     'column': 'prediction_line3',
+                #     'kind': 'line',
+                #     'color': 'blue',
+                # },
+            ]
+
+            subplot = [
+                # [
+                #     {
+                #         'column': 'line',
+                #         'kind': 'line',
+                #         'color': 'gray',
+                #     },
+                #     {
+                #         'column': 'line_shift',
+                #         'kind': 'line',
+                #         'color': 'red',
+                #     },
+                #     {
+                #         'column': '&prediction_line',
+                #         'kind': 'line',
+                #         'color': 'blue',
+                #     },
+                # ],
+                # [
+                #     {
+                #         'column': 'enter_long',
+                #         'kind': 'line',
+                #     },
+                #     {
+                #         'column': 'enter_short',
+                #         'kind': 'line',
+                #     },
+                # ],
+            ]
+
+            filename = f"{metadata['pair'].replace('/', '-')}.html"
+            plot.plot(metadata['pair'], dataframe[dataframe['&prediction_line'] > 0], addplot=addplot, subplot=subplot, filename=filename)
 
         return dataframe
 
@@ -303,9 +404,7 @@ class StrategyNN(IStrategy):
             f'current_time:{current_time}'
             f' pair:{pair}'
             f' reason:{reason}'
-            f'{color_begin}'
-            f' current_profit:{current_profit}'
-            f'{color_end}'
+            f' current_profit:{color_begin}{current_profit:.8f}{color_end}'
             f' open_rate:{trade.open_rate:0.4f}'
             f' current_rate:{current_rate:0.4f}'
             f' timedelta:{current_time - trade.open_date_utc}'

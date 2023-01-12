@@ -133,14 +133,17 @@ class DenseBlock(tensorflow.keras.layers.Layer):
         return x
 
 class DenseBlockSkip(tensorflow.keras.layers.Layer):
-    def __init__(self, n):
+    def __init__(self, n, n_internal):
         super(DenseBlockSkip, self).__init__()
         self.layer_1 = tensorflow.keras.layers.BatchNormalization()
         self.layer_2 = tensorflow.keras.layers.Activation('relu')
-        self.layer_3 = tensorflow.keras.layers.Dense(64)
+        self.layer_3 = tensorflow.keras.layers.Dense(n_internal)
         self.layer_4 = tensorflow.keras.layers.BatchNormalization()
         self.layer_5 = tensorflow.keras.layers.Activation('relu')
-        self.layer_6 = tensorflow.keras.layers.Dense(n)
+        self.layer_6 = tensorflow.keras.layers.Dense(n_internal)
+        self.layer_7 = tensorflow.keras.layers.BatchNormalization()
+        self.layer_8 = tensorflow.keras.layers.Activation('relu')
+        self.layer_9 = tensorflow.keras.layers.Dense(n)
 
     def call(self, inputs):
         x = self.layer_1(inputs)
@@ -149,6 +152,9 @@ class DenseBlockSkip(tensorflow.keras.layers.Layer):
         x = self.layer_4(x)
         x = self.layer_5(x)
         x = self.layer_6(x)
+        x = self.layer_7(x)
+        x = self.layer_8(x)
+        x = self.layer_9(x)
         x += inputs
         return x
 
@@ -279,6 +285,7 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
+    '''
     n = 4
     x = tensorflow.keras.layers.Flatten()(inputs)
     x = tensorflow.keras.layers.Dense(output_class * n ** 4)(x)
@@ -294,20 +301,54 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
+    '''
+
+    '''
+    n = 4
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = DenseNotTainable(output_class * n ** 4)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = DenseNotTainable(output_class * n ** 3)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = DenseNotTainable(output_class * n ** 2)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = DenseNotTainable(output_class * n)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    '''
+
+    n = 4
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(output_class * n ** 4, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * n ** 3, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * n ** 2, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class * n, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
 
     '''
     x = tensorflow.keras.layers.Flatten()(inputs)
-    x = tensorflow.keras.layers.Dense(128)(x)
+    x = DenseNotTainable(128)(x)
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = DenseNotTainable(128)(x)
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
-    x = tensorflow.keras.layers.Dense(4)(x)
+    x = DenseNotTainable(128)(x)
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
-    x = tensorflow.keras.layers.Activation('softmax')(x)
     '''
 
     '''
@@ -320,7 +361,22 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Dense(output_class)(x)
     '''
 
+    '''
+    n = 128
+    n_internal = 64
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(n)(x)
+    x = DenseBlockSkip(n, n_internal)(x)
+    x = DenseBlockSkip(n, n_internal)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
+    '''
+
     model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
+
+    # for i in model.layers[:-1]:
+    #     i.trainable = False
 
     '''
     x = tensorflow.keras.layers.Flatten()(inputs)
@@ -335,7 +391,6 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
     x = tensorflow.keras.layers.Activation('softmax')(x)
-    model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
     '''
 
     '''
@@ -354,7 +409,6 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
     x = tensorflow.keras.layers.Activation('softmax')(x)
-    model = tensorflow.keras.models.Model(inputs=inputs, outputs=x)
     '''
 
     '''
@@ -380,7 +434,8 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = Activation('relu')(x)
     x = SimpleDense(2)(x)
     x = Activation('softmax')(x)
-    model = Model(inputs=inputs, outputs=x)    '''
+    model = Model(inputs=inputs, outputs=x)
+    '''
 
     '''
     x = Flatten()(inputs)
@@ -391,25 +446,6 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
     x = SimpleDense(2)(x)
-    x = Activation('softmax')(x)
-    model = Model(inputs=inputs, outputs=x)
-    '''
-
-    '''
-    x = Flatten()(inputs)
-    x = Dense(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = DenseBlockSkip(1000)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(2)(x)
     x = Activation('softmax')(x)
     model = Model(inputs=inputs, outputs=x)
     '''

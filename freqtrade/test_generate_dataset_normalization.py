@@ -13,6 +13,9 @@ print(y)
 y = generate_dataset.window_nomalization(x, version='absolute_first')
 print(y)
 
+y = generate_dataset.window_nomalization(x, version='absolute_previous')
+print(y)
+
 y = generate_dataset.window_nomalization(x, version='minmax')
 print(y)
 

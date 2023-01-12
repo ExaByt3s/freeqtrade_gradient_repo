@@ -398,12 +398,15 @@ def shift(input_a: ndarray, period: int, fill_value=numpy.nan) -> ndarray:  # (i
     return result
 
 @tensorflow.jit
-def tensorflow_shift(x: ndarray, period: int, fill_value=numpy.nan) -> tensorflow.numpy.ndarray:  # (int|float|str|bool)
+def tensorflow_shift(x: tensorflow.numpy.ndarray, period: int, axis=None, fill_value=numpy.nan) -> tensorflow.numpy.ndarray:  # (int|float|str|bool)
     if period == 0:
         return x
 
-    index = tensorflow.numpy.arange(x.shape[0])
-    x_roll = tensorflow.numpy.roll(x, period, axis=(len(x.shape) - 1))
+    if axis is None:
+        axis = 0
+
+    index = tensorflow.numpy.arange(x.shape[axis])
+    x_roll = tensorflow.numpy.roll(x, period, axis=axis)
 
     if period > 0:
         mask = index >= period
@@ -411,6 +414,7 @@ def tensorflow_shift(x: ndarray, period: int, fill_value=numpy.nan) -> tensorflo
     elif period < 0:
         mask = index < (index.shape[0] + period)
 
+    mask = tensorflow.numpy.expand_dims(mask, axis=axis)
     y = tensorflow.numpy.where(mask, x_roll, fill_value)
 
     return y

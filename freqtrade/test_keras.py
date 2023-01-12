@@ -201,7 +201,7 @@ if enable_cache and os.path.exists(cachefile):
         result = pickle.load(cachehandle)
 else:
     from load_data import load_data
-    result = load_data(window=200, return_column_feature=True)
+    result = load_data(window=400, return_column_feature=True)
 
     if enable_cache:
         with open(cachefile, 'wb') as cachehandle:
@@ -217,6 +217,10 @@ print(x_train)
 
 print(y_train.shape, y_test.shape)
 print(y_train)
+
+import numpy
+print(numpy.mean(numpy.absolute(y_train), axis=0))
+print(numpy.mean(numpy.absolute(y_test), axis=0))
 
 window = x_train.shape[1]
 feature = x_train.shape[2]
@@ -246,6 +250,10 @@ with scope():
     model.compile(optimizer=tensorflow.optimizers.SGD(), loss='mean_absolute_error', metrics=[error_absolute_maximum,
                   ratio_entry, ratio_exit_profit, ratio_hold, ratio_exit_loss, percent, percent_loss])
     model.summary()
+
+    # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/keras/backend.py#L1794-L1815
+    parameter_trainable = tensorflow.numpy.sum([tensorflow.numpy.prod(i.shape.as_list()) for i in model.trainable_weights])
+    print(f'parameter_trainable:{parameter_trainable}')
 
     early_stopping = tensorflow.keras.callbacks.EarlyStopping(monitor='loss', patience=10, mode='min',  # baseline=0.01,
                                                               start_from_epoch=20)

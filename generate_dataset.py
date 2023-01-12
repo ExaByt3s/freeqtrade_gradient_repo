@@ -135,6 +135,16 @@ def _nomalization_absolute_first(x: tensorflow.numpy.ndarray, axis: int = None) 
     y = tensorflow.numpy.where(x_0 != 0., x / x_0, numpy.nan)
     return y
 
+import indicator
+
+@tensorflow.jit
+def _nomalization_absolute_previous(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
+    x_previous = indicator.tensorflow_shift(x, 1, axis=axis)
+    x_previous = tensorflow.numpy.absolute(x_previous)
+    y = x / x_previous
+    y = tensorflow.numpy.where(tensorflow.numpy.logical_or(tensorflow.numpy.isnan(y), tensorflow.numpy.isinf(y)), 1., y)
+    return y
+
 @tensorflow.jit
 def _nomalization_minmax(x: tensorflow.numpy.ndarray, axis: int = None) -> tensorflow.numpy.ndarray:
     x_min = tensorflow.numpy.min(x, axis=axis, keepdims=True)
@@ -174,7 +184,7 @@ def _nomalization_zscore_robust(x: tensorflow.numpy.ndarray, axis: int = None) -
     return y
 
 @tensorflow.jit
-def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'zscore_robust') -> tensorflow.numpy.ndarray:
+def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'minmax_scale') -> tensorflow.numpy.ndarray:
 
     if len(x.shape) != 3:
         raise Exception
@@ -188,6 +198,8 @@ def window_nomalization(x: tensorflow.numpy.ndarray, version: str = 'zscore_robu
         x = _window_nomalization_v2(x)
     elif version == 'absolute_first':
         x = _nomalization_absolute_first(x, axis=1)
+    elif version == 'absolute_previous':
+        x = _nomalization_absolute_previous(x, axis=1)
     elif version == 'minmax':
         x = _nomalization_minmax(x, axis=1)
     elif version == 'minmax_scale':

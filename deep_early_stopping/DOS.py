@@ -98,9 +98,9 @@ import sys
 import numpy
 numpy.set_printoptions(threshold=sys.maxsize)
 
-print(X.shape)
-print(tau_mat.shape)
-print(f_mat.shape)
+print(f'X.shape: {X.shape}')
+print(f'tau_mat.shape: {tau_mat.shape}')
+print(f'f_mat.shape: {f_mat.shape}')
 
 model_all = mods
 
@@ -109,22 +109,20 @@ for n in range(S.N-1, -1, -1):
     print(f'n: {n}')
     print(f'tau_mat[n + 1]: {tau_mat[n + 1]}')
     probs, model_temp = NN(n, X, S, torch.from_numpy(tau_mat[n + 1]).float())
-    print(probs.shape)
+    print(f'probs.shape: {probs.shape}')
 
     model_all[n] = model_temp
     np_probs = probs.detach().numpy().reshape(S.M)
-    print(n, ":", np.min(np_probs)," , ", np.max(np_probs))
-    print(model_all)
-    print(np_probs)
-    print(np_probs.shape)
+    # print(n, ":", np.min(np_probs)," , ", np.max(np_probs))
+    print('model_all: {model_all}')
+    print('np_probs: {np_probs}')
+    print('np_probs.shape: {np_probs.shape}')
 
     f_mat[n,:] = (np_probs > 0.5) * 1.0
     print(f'f_mat: {f_mat}')
 
     tau_mat[n,:] = np.argmax(f_mat, axis=0)
     print(f'tau_mat: {tau_mat}')
-
-    break
 
 mods = model_all
 sys.exit()

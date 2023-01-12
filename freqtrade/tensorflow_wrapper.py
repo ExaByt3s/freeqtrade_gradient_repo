@@ -26,7 +26,7 @@ if False:
 
 import tensorflow
 
-if not callable(getattr(tensorflow,'jit', None)):
+if not callable(getattr(tensorflow, 'jit', None)):
     def jit(*args, **kwargs):
         if 'jit_compile' not in kwargs:
             kwargs['jit_compile'] = True
@@ -50,7 +50,8 @@ if False:
     tensorflow.numpy.experimental_enable_numpy_behavior()
 
 # https://stackoverflow.com/questions/20926909/python-check-if-function-exists-without-running-it
-if not callable(getattr(tensorflow.numpy,'nan_to_num', None)):
+if not callable(getattr(tensorflow.numpy, 'nan_to_num', None)):
+    # https://github.com/numpy/numpy/blob/v1.24.0/numpy/lib/type_check.py#L404-L521
     def nan_to_num(x, nan=0., posinf=None, neginf=None):
         posinf = tensorflow.numpy.inf
         neginf = -tensorflow.numpy.inf
@@ -64,7 +65,7 @@ if not callable(getattr(tensorflow.numpy,'nan_to_num', None)):
 else:
     raise Exception
 
-if not callable(getattr(tensorflow.numpy,'rollaxis', None)):
+if not callable(getattr(tensorflow.numpy, 'rollaxis', None)):
     # https://github.com/numpy/numpy/blob/main/numpy/core/numeric.py#L1245-L1332
     @tensorflow.jit
     def rollaxis(a, axis, start=0):
@@ -89,3 +90,10 @@ if not callable(getattr(tensorflow.numpy,'rollaxis', None)):
 else:
     raise Exception
 
+# https://numpy.org/doc/stable/reference/constants.html#numpy.nan
+if getattr(tensorflow.numpy, 'nan', None) is None:
+    import numpy
+    tensorflow.numpy.nan = numpy.nan
+
+else:
+    raise Exception
