@@ -321,6 +321,7 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Dense(output_class)(x)
     '''
 
+    '''
     n = 4
     x = tensorflow.keras.layers.Flatten()(inputs)
     x = tensorflow.keras.layers.Dense(output_class * n ** 4, trainable=False)(x)
@@ -336,6 +337,7 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.BatchNormalization()(x)
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
+    '''
 
     '''
     x = tensorflow.keras.layers.Flatten()(inputs)
@@ -350,6 +352,22 @@ def create_model(input_shape: list, output_class: int) -> tensorflow.keras.model
     x = tensorflow.keras.layers.Activation('relu')(x)
     x = tensorflow.keras.layers.Dense(output_class)(x)
     '''
+
+    n = 128
+    x = tensorflow.keras.layers.Flatten()(inputs)
+    x = tensorflow.keras.layers.Dense(n, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(n, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(n, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(n, trainable=False)(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Activation('relu')(x)
+    x = tensorflow.keras.layers.Dense(output_class)(x)
 
     '''
     x = tensorflow.keras.layers.GRU(64)(inputs)

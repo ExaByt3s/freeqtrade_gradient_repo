@@ -1,4 +1,4 @@
 tensorflow
 # tensorflow_addons
 # tensorflow_io
-tensorflow_probability
+tensorflow_probability==0.14.0

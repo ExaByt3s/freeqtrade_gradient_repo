@@ -1,1 +1,1 @@
-freqtrade backtesting --timerange=20220510-20220511 -p ETH/USDT
+freqtrade backtesting --timerange=20220501-20220601 -p ETH/USDT
