@@ -11,11 +11,13 @@ print(f'XLA_FLAGS=\'{os.environ["XLA_FLAGS"]}\'')
 
 tf_xla_flags = []
 tf_xla_flags.append('--tf_xla_auto_jit=2')
-tf_xla_flags.append('--tf_xla_cpu_global_jit')
-# ISSUE https://github.com/tensorflow/tensorflow/issues/57649
-# tf_xla_flags.append('--tf_xla_persistent_cache_directory=/tmp/tensorflow/cache')
 if False:
-    xla_flags.append('--tf_xla_clustering_debug')
+    tf_xla_flags.append('--tf_xla_cpu_global_jit')
+if False:
+    # ISSUE https://github.com/tensorflow/tensorflow/issues/57649
+    tf_xla_flags.append('--tf_xla_persistent_cache_directory=/tmp/tensorflow/cache')
+if False:
+    tf_xla_flags.append('--tf_xla_clustering_debug')
 
 os.environ['TF_XLA_FLAGS'] = ' '.join(tf_xla_flags)
 print(f'TF_XLA_FLAGS=\'{os.environ["TF_XLA_FLAGS"]}\'')
