@@ -172,11 +172,12 @@ class StrategyNN(IStrategy):
                 dataframe[f'%({column[i]} / {column[j]})'] = dataframe[column[i]] / dataframe[column[j]]
 
         if set_generalized_indicators:
+            log.debug(list(dataframe))
+
             # dataframe['%day_of_week'] = dataframe['date'].dt.dayofweek / 7
             # dataframe['%hour_of_day'] = dataframe['date'].dt.hour / 24
             # dataframe['%minute_of_hour'] = dataframe['date'].dt.minute / 60
 
-            log.debug(f'%{pair}-heikin_ashi-close_{self.timeframe}')
             line_price = dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'].to_numpy()
             dataframe['line_price'] = line_price
 
@@ -201,6 +202,8 @@ class StrategyNN(IStrategy):
             # x = indicator.shift(x.numpy(), -100)
             # dataframe['&prediction_line'] = x
 
+            dataframe['RSI'] = ta.RSI(dataframe[f'%{pair}-heikin_ashi-close_{self.timeframe}'], timeperiod=13)
+
         return dataframe
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -214,6 +217,8 @@ class StrategyNN(IStrategy):
                 (dataframe['&prediction_line'] > 1 + self.threshold_entry)
                 # &
                 # ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] > 1 + 0.02)
+                &
+                (dataframe['RSI'] < 30)
             )
             , ['enter_long', 'enter_tag']
         ] = (1, 'Long')
@@ -225,6 +230,8 @@ class StrategyNN(IStrategy):
                 (dataframe['&prediction_line'] < 1 - self.threshold_entry)
                 # &
                 # ((dataframe['line'] * dataframe['&prediction_line']) / dataframe['line_price'] < 1 - 0.02)
+                &
+                (dataframe['RSI'] > 70)
             )
             , ['enter_short', 'enter_tag']
         ] = (1, 'Short')
